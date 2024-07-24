@@ -1,0 +1,5 @@
+Metadata-Version: 2.1
+Name: rebar
+Version: 0.0.1
+Summary: rebar is Andy Jones’s personal reinforcement learning toolbox.
+Requires-Python: >=3.6

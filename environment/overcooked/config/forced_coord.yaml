@@ -1,0 +1,18 @@
+# Format goes like this
+# trainer_name:
+#   k: v
+
+name: overcooked
+mode: full_divider_large_room
+horizon: 200
+recipes: [
+  "TomatoLettuceSalad",
+  "OnionCarrotSalad",
+]
+obs_spaces: dense
+num_agents: 2
+interact_reward: 0.0
+progress_reward: 0.0
+complete_reward: 10.0
+step_cost: 0.05
+display: True

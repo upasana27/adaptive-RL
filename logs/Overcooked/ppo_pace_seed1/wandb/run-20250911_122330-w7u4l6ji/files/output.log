@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "train_.py", line 890, in <module>
+    train_embedding(arg, train_policies, eval_policies)
+  File "train_.py", line 550, in train_embedding
+    obs, reward, done, infos = envs.step(action_env.squeeze(-1))
+  File "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace/lib/python3.8/site-packages/stable_baselines3/common/vec_env/base_vec_env.py", line 162, in step
+    self.step_async(actions)
+  File "/home/asurite.ad.asu.edu/ubiswas2/adaptive-RL/learning/envs.py", line 480, in step_async
+    actions = actions.squeeze(1)
+IndexError: Dimension out of range (expected to be in range of [-1, 0], but got 1)

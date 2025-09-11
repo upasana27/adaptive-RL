@@ -55,10 +55,11 @@ def train_embedding(args, train_pool, eval_pool):
           f'# processes per opponent: {num_procs_per_opponent}, \n'
           f'# agents: {num_all_agents}, \n'
           f'# instantiated individual policies: {num_trained_policies}\n')
-
+    print("start making parallel environments")
     envs = make_vec_envs(args, args.env_name, args.seed, args.num_processes, args.log_dir, device, True,
                          always_use_dummy=args.use_dummy_vec_env)
     max_episode_length = envs.env_method('episode_length', indices=0)[0]
+    print("finish making parallel environments")
     if args.multi_agent == 1:
         for i in range(args.num_processes):
             # This performs a deepcopy, so every environment receives an exclusive copy
@@ -848,6 +849,7 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError
     train_policies, eval_policies = get_train_eval_pool(arg)
+    # THIS STARTS AFTER CREATING THE PARTNER POOLS - TRAINING + EVAL
     if arg.opponent_id is not None:
         train_policies = [train_policies[arg.opponent_id]]
         print(f'Setting a specific opponent {arg.opponent_id} to train against, adjusting train pool size to 1.')

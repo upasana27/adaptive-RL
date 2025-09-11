@@ -1,0 +1,212 @@
+{
+    "os": "Linux-6.14.0-28-generic-x86_64-with-glibc2.17",
+    "python": "3.8.20",
+    "heartbeatAt": "2025-09-11T19:23:30.840358",
+    "startedAt": "2025-09-11T19:23:30.069505",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "--env-name",
+        "Overcooked",
+        "--env_config",
+        "./environment/overcooked/config/forced_coord_1_to_1_full.yaml",
+        "--player-id",
+        "0",
+        "--recipe-type",
+        "cross",
+        "--algo",
+        "ppo",
+        "--num-steps",
+        "1000",
+        "--num-processes",
+        "72",
+        "--use-gae",
+        "--eps",
+        "1e-8",
+        "--use-proper-time-limit",
+        "--lr",
+        "1e-3",
+        "--entropy-coef",
+        "3e-2",
+        "--value-loss-coef",
+        "0.5",
+        "--num-epochs",
+        "4",
+        "--num-mini-batch",
+        "18",
+        "--gamma",
+        "0.99",
+        "--gae-lambda",
+        "0.95",
+        "--max-grad-norm",
+        "15.0",
+        "--num-env-steps",
+        "30000000",
+        "--save-interval",
+        "5000000",
+        "--log-interval",
+        "10000",
+        "--eval-interval",
+        "100000",
+        "--eval-episodes",
+        "5",
+        "--exp-name",
+        "pace",
+        "--latent-training",
+        "--e2e-obj",
+        "--deterministic-latent",
+        "--use-latent-critic",
+        "--pre-hidden-dims",
+        "128",
+        "128",
+        "--encoder-base",
+        "mlp",
+        "--agg-func",
+        "mean",
+        "--post-hidden-dims",
+        "128",
+        "--latent-dim",
+        "128",
+        "--kl-coef",
+        "0",
+        "--hidden-dims",
+        "128",
+        "128",
+        "--act-func",
+        "relu",
+        "--train-pool-size",
+        "18",
+        "--eval-pool-size",
+        "9",
+        "--rule-based-opponents",
+        "18",
+        "--auxiliary-policy-cls-coef",
+        "1.0",
+        "--policy-cls-reward-coef",
+        "0.2",
+        "--policy-cls-reward-type",
+        "accuracy",
+        "--policy-cls-reward-mode",
+        "max_full",
+        "--policy-cls-warmup-steps",
+        "1000000",
+        "--policy-cls-reward-decay-steps",
+        "25000000",
+        "--visit-reward-coef",
+        "0.0",
+        "--visit-reward-type",
+        "episode",
+        "--history-middle-sampling",
+        "--merge-encoder-computation",
+        "--history-full-size",
+        "5",
+        "--history-size",
+        "5",
+        "--history-use-episodes",
+        "--include-current-episode",
+        "--use-meta-episode",
+        "--self-obs-mode",
+        "--clear-history-on-full",
+        "--separate-history",
+        "--seed",
+        "1",
+        "--wandb-user-name",
+        "ubiswas"
+    ],
+    "state": "running",
+    "program": "train_.py",
+    "codePath": "train_.py",
+    "git": {
+        "remote": "https://github.com/upasana27/adaptive-RL.git",
+        "commit": "2c70ba917c4ae92be0d4e7c8993920948945d29d"
+    },
+    "email": "upasana_biswas@ymail.com",
+    "root": "/home/asurite.ad.asu.edu/ubiswas2/adaptive-RL",
+    "host": "en4166274l",
+    "username": "ubiswas2",
+    "executable": "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace/bin/python",
+    "cpu_count": 6,
+    "cpu_count_logical": 12,
+    "cpu_freq": {
+        "current": 1218.9898333333333,
+        "min": 1200.0,
+        "max": 3700.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1200.112,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1199.543,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1198.534,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1199.981,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1199.842,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1201.22,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.004,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.408,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3700.0
+        }
+    ],
+    "disk": {
+        "total": 230.6518211364746,
+        "used": 47.70227813720703
+    },
+    "gpu": "Quadro P600",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "Quadro P600",
+            "memory_total": 2147483648
+        }
+    ],
+    "memory": {
+        "total": 62.455474853515625
+    }
+}

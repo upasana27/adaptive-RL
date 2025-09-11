@@ -92,6 +92,7 @@ class RuleBasedPolicy:
         self.rand_p = rand_p # the probability of doing random actions instead of carrying out current plan
         assert (support_set is None and event_probs is None and policy_type != 'specified') or (len(support_set)==len(event_probs) and policy_type == 'specified')
         self.env_name = env_name
+        print(self.env_name)
         if "divider" in env_name:
             if "large" in env_name:
                 self.divider_loc = [(3,i) for i in range(1,12)]
@@ -527,32 +528,85 @@ class RuleBasedPolicy:
         # return self.get_action_from_event(selected_event)
 
 
+# def get_train_eval_pool(args):
+#     assert args.env_name == 'Overcooked'
+#     if args.desire_id is not None:
+#         assert args.desire_id < 2 ** 5, f'Desire id out of range: {args.desire_id}'
+#         policy_pool_train = [[((args.desire_id >> i) & 1) for i in range(5)]]
+#         policy_pool_eval = []
+#         self_play_opponents = 0
+#         print('Put 1 desire into train pool')
+#     elif args.rule_based_opponents > 0 or args.eval_pool_size > 0:
+#         with open(args.env_config, 'r') as env_config_file:
+#             env_map = yaml.safe_load(env_config_file)['mode']
+#         print('Using map', env_map, 'and recipe type', args.recipe_type)
+#         # where is multi_agent coming from ?
+#         print(args.multi_agent)
+#         policy_pool_train_eval = generate_policy_pool(args.multi_agent > 1, args.p, env_map,
+#                                                       args.rule_based_opponents + args.eval_pool_size,
+#                                                       args.recipe_type, args.pool_seed)
+#         policy_pool_train = policy_pool_train_eval[:args.rule_based_opponents]
+#         policy_pool_eval = policy_pool_train_eval[args.rule_based_opponents:]
+#         self_play_opponents = args.train_pool_size - args.rule_based_opponents
+#         print('Put', len(policy_pool_train), 'rule-based opponents into train pool, ingredient support sets:',
+#               [p.ingredient_support_set for p in policy_pool_train])
+#         print('Put', len(policy_pool_eval), 'rule-based opponents into eval pool, ingredient support sets:',
+#               [p.ingredient_support_set for p in policy_pool_eval])
+#     else:
+#         policy_pool_train = []
+#         policy_pool_eval = []
+#         self_play_opponents = args.train_pool_size
+#     if self_play_opponents > 0:
+#         assert 'potato_hard' in args.env_config, f'Loading potato hard fcp checkpoints for map {args.env_config}'
+#         self_play_pool = load_potato_hard_self_play_policy_pool(1 - args.player_id)
+#         assert len(self_play_pool) >= self_play_opponents, \
+#             f'Requesting {self_play_opponents} self-play opponents, got {len(self_play_pool)}'
+#         policy_pool_train.extend(self_play_pool[:self_play_opponents])
+#         print('Put', self_play_opponents, 'self-play opponents into train pool, model paths:',
+#               [p.model_path for p in self_play_pool[:self_play_opponents]])
+#     return policy_pool_train, policy_pool_eval
+
 def get_train_eval_pool(args):
     assert args.env_name == 'Overcooked'
-    if args.desire_id is not None:
-        assert args.desire_id < 2 ** 5, f'Desire id out of range: {args.desire_id}'
-        policy_pool_train = [[((args.desire_id >> i) & 1) for i in range(5)]]
-        policy_pool_eval = []
-        self_play_opponents = 0
-        print('Put 1 desire into train pool')
-    elif args.rule_based_opponents > 0 or args.eval_pool_size > 0:
-        with open(args.env_config, 'r') as env_config_file:
-            env_map = yaml.safe_load(env_config_file)['mode']
+    left_ingred = ingredients[:3]
+    right_ingred = ingredients[3:]
+    ingredient_sets_all = []
+    policy_pool_train = []
+    policy_pool_eval = []
+    with open(args.env_config, 'r') as env_config_file:
+        env_map = yaml.safe_load(env_config_file)['mode']
         print('Using map', env_map, 'and recipe type', args.recipe_type)
-        policy_pool_train_eval = generate_policy_pool(args.multi_agent > 1, args.p, env_map,
-                                                      args.rule_based_opponents + args.eval_pool_size,
-                                                      args.recipe_type, args.pool_seed)
-        policy_pool_train = policy_pool_train_eval[:args.rule_based_opponents]
-        policy_pool_eval = policy_pool_train_eval[args.rule_based_opponents:]
-        self_play_opponents = args.train_pool_size - args.rule_based_opponents
-        print('Put', len(policy_pool_train), 'rule-based opponents into train pool, ingredient support sets:',
+    # print(left_ingred[3])
+    i=0
+    while i<len(left_ingred):
+        print(i)
+        # print(left_ingred[i], right_ingred[i])
+        ingredient_sets_all.append([left_ingred[i], right_ingred[i]])
+        i = i + 1
+    # print(ingredient_sets_all)
+    ingredient_set_train = ingredient_sets_all[0:2]
+    ingredient_set_eval = ingredient_sets_all[2:3]
+    print(ingredient_set_train)
+    print(ingredient_set_eval)
+    i = 0
+    j = 0
+    while i < args.train_pool_size:
+        for recipe in ingredient_set_train:
+            policy = RuleBasedPolicy('minimum', np.random.rand() * args.p, 0, 0.1 * np.random.rand(), None,
+                                     env_map, ingredient_support_set=recipe)
+            policy_pool_train.append(policy)
+            i = i + 1
+    while j < args.eval_pool_size:
+        for recipe in ingredient_set_eval:
+            policy = RuleBasedPolicy('minimum', np.random.rand() * args.p, 0, 0.1 * np.random.rand(), None,
+                                     env_map, ingredient_support_set=recipe)
+            policy_pool_eval.append(policy)
+            j = j + 1
+    print('Put', len(policy_pool_train), 'rule-based opponents into train pool, ingredient support sets:',
               [p.ingredient_support_set for p in policy_pool_train])
-        print('Put', len(policy_pool_eval), 'rule-based opponents into eval pool, ingredient support sets:',
+    print('Put', len(policy_pool_eval), 'rule-based opponents into eval pool, ingredient support sets:',
               [p.ingredient_support_set for p in policy_pool_eval])
-    else:
-        policy_pool_train = []
-        policy_pool_eval = []
-        self_play_opponents = args.train_pool_size
+    self_play_opponents = args.train_pool_size - args.rule_based_opponents
     if self_play_opponents > 0:
         assert 'potato_hard' in args.env_config, f'Loading potato hard fcp checkpoints for map {args.env_config}'
         self_play_pool = load_potato_hard_self_play_policy_pool(1 - args.player_id)
@@ -563,7 +617,6 @@ def get_train_eval_pool(args):
               [p.model_path for p in self_play_pool[:self_play_opponents]])
     return policy_pool_train, policy_pool_eval
 
-
 def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, pool_seed=1):
     old_state = np.random.get_state()
     np.random.seed(pool_seed)
@@ -571,6 +624,8 @@ def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, po
     left_ingred = ingredients[:3]
     right_ingred = ingredients[3:]
     ingredient_sets_all = []
+    for i in (0,len(left_ingred)-1,1):
+        ingredient_sets_all.append([left_ingred[i], right_ingred[i]])
     # for i in range(1, 2 ** len(ingredients)):
     #     if i > (i & -i):
     #         ingredient_sets_all.append([ingredients[j] for j in range(len(ingredients)) if (i >> j) & 1])
@@ -596,15 +651,20 @@ def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, po
     all_policy_indices = np.arange(len(ingredient_sets_all))
     np.random.shuffle(all_policy_indices)
     for i in range(pool_size):
+        # when unique recipes are finished
         if i >= len(all_policy_indices):
+            # reset i to 0/1
             i = i % len(all_policy_indices)
+        # seems to be just choosing the same policies, but randomly 
         ingredient_support_set = ingredient_sets_all[all_policy_indices[i] % len(ingredient_sets_all)]
         print(f'Policy generated with support set {ingredient_support_set} and convention {None}')
         if gen_desire:
+            print(" not here, we don't want to use desires.")
             policy = [int(ing in ingredient_support_set) for ing in ingredients]
         else:
             # policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, np.random.rand() * p_max, 0.05, None,
             #                          env_name, ingredient_support_set=ingredient_support_set)
+            # this is where they get called with p_nav and p_act
             policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, 0, 0.1 * np.random.rand(), None,
                                      env_name, ingredient_support_set=ingredient_support_set)
         pool.append(policy)

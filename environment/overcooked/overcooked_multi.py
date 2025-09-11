@@ -1,5 +1,5 @@
 import numpy as np
-import gym
+import gymnasium as gym
 from policy import RuleBasedPolicy
 from gym_cooking import Arrdict
 

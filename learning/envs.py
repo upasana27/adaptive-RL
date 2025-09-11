@@ -56,6 +56,7 @@ def make_env(args, env_id, seed, rank, log_dir, allow_early_resets, render_rank=
                 print('Overriding env config to {} for desire id {}'.format(args.env_config, args.desire_id))
                 # raise NotImplementedError('Configs have changed a lot; check the path here and comment this line if you want to continue.')
             env = OvercookedMaker.make_env_from_config(args.env_config, **override_kwargs)
+            print("made from config")
             if args.multi_agent > 1:
                 from environment.overcooked.overcooked_multi import Overcooked_MultiEnv
                 env = Overcooked_MultiEnv(env)

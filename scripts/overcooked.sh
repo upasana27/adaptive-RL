@@ -1,6 +1,6 @@
 #!/bin/bash
 python train_.py --env-name Overcooked \
-  --env_config './environment/overcooked/config/forced_coord_broccoli_dense_reward_cross_recipe_upper_random_init_step01_el40_partial.yaml' \
+  --env_config './environment/overcooked/config/forced_coord_1_to_1_full.yaml' \
   --player-id 0 --recipe-type cross \
   --algo ppo --num-steps 1000 --num-processes 72 --use-gae --eps 1e-8 --use-proper-time-limit \
   --lr 1e-3 --entropy-coef 3e-2 --value-loss-coef 0.5 --num-epochs 4 --num-mini-batch 18 --gamma 0.99 --gae-lambda 0.95 \
@@ -30,5 +30,5 @@ python train_.py --env-name Overcooked \
   --self-obs-mode \
   --clear-history-on-full \
   --separate-history \
-  --seed $1 \
-  --wandb-user-name <wandb_user_name>
+  --seed 1 \
+  --wandb-user-name ubiswas

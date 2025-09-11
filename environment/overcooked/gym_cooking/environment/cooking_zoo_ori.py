@@ -13,7 +13,7 @@ from pettingzoo.utils import agent_selector
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.conversions import parallel_wrapper_fn
 
-import gymnasium as gym
+import gym
 
 
 CollisionRepr = namedtuple("CollisionRepr", "time agent_names agent_locations")

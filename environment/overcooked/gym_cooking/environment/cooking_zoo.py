@@ -143,7 +143,6 @@ class CookingEnvironment(AECEnv):
                                                                             for agent in self.possible_agents}
         
         self.action_spaces = {agent: gym.spaces.Discrete(6) for agent in self.possible_agents}
-        print("this is the action_spaces: ", self.action_spaces)
         self.held_obj = []
     
     def update_desire(self, desire):

@@ -1,6 +1,6 @@
 from environment.policy_common import MultiAgentResamplePolicy
 from environment.mpe import scenarios
-import gymnasium as gym
+import gym
 from gym import spaces
 from environment.mpe.core import World
 import numpy as np

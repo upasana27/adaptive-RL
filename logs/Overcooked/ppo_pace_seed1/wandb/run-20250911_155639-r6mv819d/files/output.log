@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "train_.py", line 888, in <module>
+    train_embedding(arg, train_policies, eval_policies)
+  File "train_.py", line 549, in train_embedding
+    obs, reward, done, infos = envs.step(action_env.squeeze(-1))
+  File "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace-orig/lib/python3.8/site-packages/stable_baselines3/common/vec_env/base_vec_env.py", line 163, in step
+    return self.step_wait()
+  File "/home/asurite.ad.asu.edu/ubiswas2/adaptive-RL/learning/envs.py", line 484, in step_wait
+    obs, reward, done, info = self.venv.step_wait()
+  File "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace-orig/lib/python3.8/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 121, in step_wait
+    results = [remote.recv() for remote in self.remotes]
+  File "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace-orig/lib/python3.8/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 121, in <listcomp>
+    results = [remote.recv() for remote in self.remotes]
+  File "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace-orig/lib/python3.8/multiprocessing/connection.py", line 250, in recv
+    buf = self._recv_bytes()
+  File "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace-orig/lib/python3.8/multiprocessing/connection.py", line 414, in _recv_bytes
+    buf = self._recv(4)
+  File "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace-orig/lib/python3.8/multiprocessing/connection.py", line 379, in _recv
+    chunk = read(handle, remaining)
+KeyboardInterrupt

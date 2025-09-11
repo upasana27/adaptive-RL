@@ -11,7 +11,7 @@ from datetime import datetime
 from time import sleep
 
 
-# os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = 'hide'
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = 'hide'
 
 
 class Game:

@@ -8,7 +8,7 @@ _wandb:
     is_jupyter_run: false
     is_kaggle_kernel: false
     python_version: 3.8.20
-    start_time: 1757618610.092862
+    start_time: 1757631399.030876
     t:
       1:
       - 1
@@ -104,7 +104,7 @@ contrastive_tau:
   value: null
 cuda:
   desc: null
-  value: false
+  value: true
 cuda_deterministic:
   desc: null
   value: false

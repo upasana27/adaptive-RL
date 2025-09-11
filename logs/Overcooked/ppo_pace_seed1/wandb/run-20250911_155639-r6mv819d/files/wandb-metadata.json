@@ -1,8 +1,8 @@
 {
     "os": "Linux-6.14.0-28-generic-x86_64-with-glibc2.17",
     "python": "3.8.20",
-    "heartbeatAt": "2025-09-11T19:23:30.840358",
-    "startedAt": "2025-09-11T19:23:30.069505",
+    "heartbeatAt": "2025-09-11T22:56:39.977926",
+    "startedAt": "2025-09-11T22:56:39.005433",
     "docker": null,
     "cuda": null,
     "args": [
@@ -118,68 +118,38 @@
     "codePath": "train_.py",
     "git": {
         "remote": "https://github.com/upasana27/adaptive-RL.git",
-        "commit": "2c70ba917c4ae92be0d4e7c8993920948945d29d"
+        "commit": "26b9ec2340d6cbbfed64bc5b931517daec7fc455"
     },
     "email": "upasana_biswas@ymail.com",
     "root": "/home/asurite.ad.asu.edu/ubiswas2/adaptive-RL",
     "host": "en4166274l",
     "username": "ubiswas2",
-    "executable": "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace/bin/python",
+    "executable": "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace-orig/bin/python",
     "cpu_count": 6,
     "cpu_count_logical": 12,
     "cpu_freq": {
-        "current": 1218.9898333333333,
+        "current": 1200.02225,
         "min": 1200.0,
         "max": 3700.0
     },
     "cpu_freq_per_core": [
         {
-            "current": 1200.112,
+            "current": 1199.994,
             "min": 1200.0,
             "max": 3700.0
         },
         {
-            "current": 1199.543,
+            "current": 1199.996,
             "min": 1200.0,
             "max": 3700.0
         },
         {
-            "current": 1198.534,
+            "current": 1200.055,
             "min": 1200.0,
             "max": 3700.0
         },
         {
-            "current": 1200.0,
-            "min": 1200.0,
-            "max": 3700.0
-        },
-        {
-            "current": 1199.981,
-            "min": 1200.0,
-            "max": 3700.0
-        },
-        {
-            "current": 1199.842,
-            "min": 1200.0,
-            "max": 3700.0
-        },
-        {
-            "current": 1200.0,
-            "min": 1200.0,
-            "max": 3700.0
-        },
-        {
-            "current": 1201.22,
-            "min": 1200.0,
-            "max": 3700.0
-        },
-        {
-            "current": 1200.004,
-            "min": 1200.0,
-            "max": 3700.0
-        },
-        {
-            "current": 1200.408,
+            "current": 1200.175,
             "min": 1200.0,
             "max": 3700.0
         },
@@ -190,13 +160,43 @@
         },
         {
             "current": 1200.0,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.014,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1199.774,
+            "min": 1200.0,
+            "max": 3700.0
+        },
+        {
+            "current": 1200.407,
             "min": 1200.0,
             "max": 3700.0
         }
     ],
     "disk": {
         "total": 230.6518211364746,
-        "used": 47.70227813720703
+        "used": 47.71633529663086
     },
     "gpu": "Quadro P600",
     "gpu_count": 1,

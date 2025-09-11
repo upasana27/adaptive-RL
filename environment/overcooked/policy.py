@@ -92,7 +92,6 @@ class RuleBasedPolicy:
         self.rand_p = rand_p # the probability of doing random actions instead of carrying out current plan
         assert (support_set is None and event_probs is None and policy_type != 'specified') or (len(support_set)==len(event_probs) and policy_type == 'specified')
         self.env_name = env_name
-        print(self.env_name)
         if "divider" in env_name:
             if "large" in env_name:
                 self.divider_loc = [(3,i) for i in range(1,12)]
@@ -540,8 +539,6 @@ class RuleBasedPolicy:
 #         with open(args.env_config, 'r') as env_config_file:
 #             env_map = yaml.safe_load(env_config_file)['mode']
 #         print('Using map', env_map, 'and recipe type', args.recipe_type)
-#         # where is multi_agent coming from ?
-#         print(args.multi_agent)
 #         policy_pool_train_eval = generate_policy_pool(args.multi_agent > 1, args.p, env_map,
 #                                                       args.rule_based_opponents + args.eval_pool_size,
 #                                                       args.recipe_type, args.pool_seed)
@@ -565,6 +562,7 @@ class RuleBasedPolicy:
 #         print('Put', self_play_opponents, 'self-play opponents into train pool, model paths:',
 #               [p.model_path for p in self_play_pool[:self_play_opponents]])
 #     return policy_pool_train, policy_pool_eval
+
 
 def get_train_eval_pool(args):
     assert args.env_name == 'Overcooked'
@@ -616,7 +614,6 @@ def get_train_eval_pool(args):
         print('Put', self_play_opponents, 'self-play opponents into train pool, model paths:',
               [p.model_path for p in self_play_pool[:self_play_opponents]])
     return policy_pool_train, policy_pool_eval
-
 def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, pool_seed=1):
     old_state = np.random.get_state()
     np.random.seed(pool_seed)
@@ -624,8 +621,6 @@ def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, po
     left_ingred = ingredients[:3]
     right_ingred = ingredients[3:]
     ingredient_sets_all = []
-    for i in (0,len(left_ingred)-1,1):
-        ingredient_sets_all.append([left_ingred[i], right_ingred[i]])
     # for i in range(1, 2 ** len(ingredients)):
     #     if i > (i & -i):
     #         ingredient_sets_all.append([ingredients[j] for j in range(len(ingredients)) if (i >> j) & 1])
@@ -651,20 +646,15 @@ def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, po
     all_policy_indices = np.arange(len(ingredient_sets_all))
     np.random.shuffle(all_policy_indices)
     for i in range(pool_size):
-        # when unique recipes are finished
         if i >= len(all_policy_indices):
-            # reset i to 0/1
             i = i % len(all_policy_indices)
-        # seems to be just choosing the same policies, but randomly 
         ingredient_support_set = ingredient_sets_all[all_policy_indices[i] % len(ingredient_sets_all)]
         print(f'Policy generated with support set {ingredient_support_set} and convention {None}')
         if gen_desire:
-            print(" not here, we don't want to use desires.")
             policy = [int(ing in ingredient_support_set) for ing in ingredients]
         else:
             # policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, np.random.rand() * p_max, 0.05, None,
             #                          env_name, ingredient_support_set=ingredient_support_set)
-            # this is where they get called with p_nav and p_act
             policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, 0, 0.1 * np.random.rand(), None,
                                      env_name, ingredient_support_set=ingredient_support_set)
         pool.append(policy)

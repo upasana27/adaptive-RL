@@ -354,6 +354,10 @@ def get_args():
         '--opponent-switch-period-max', type=int
     )
     parser.add_argument(
+        '--opponent-switch-schedule', type=int
+    )
+
+    parser.add_argument(
         '--history-middle-sampling', action='store_true', help='allow samples ending in the middle of an episode'
     )
     parser.add_argument(

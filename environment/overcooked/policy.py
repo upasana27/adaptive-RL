@@ -655,7 +655,7 @@ def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, po
         else:
             # policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, np.random.rand() * p_max, 0.05, None,
             #                          env_name, ingredient_support_set=ingredient_support_set)
-            policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, 0, 0.1 * np.random.rand(), None,
+            policy = RuleBasedPolicy('full', 0, 0, 0, None,
                                      env_name, ingredient_support_set=ingredient_support_set)
         pool.append(policy)
 

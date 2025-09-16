@@ -134,7 +134,6 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                         eval_history.add(i, torch.from_numpy(info['terminal_observation']).float(), None,
                                          0.0 if eval_history.has_rew_done else None)
                     eval_history.finish_episode(i)
-
         if (args.opponent_switch_period_min is not None or args.opponent_switch_schedule is not None) and update_history:
             for i, info in enumerate(infos):
                 if 'episode' in info.keys():

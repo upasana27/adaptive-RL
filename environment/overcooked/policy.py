@@ -583,20 +583,21 @@ def get_train_eval_pool(args):
         i = i + 1
     # print(ingredient_sets_all)
     ingredient_set_train = ingredient_sets_all[0:2]
-    ingredient_set_eval = ingredient_sets_all[2:3]
+    ingredient_set_eval = ingredient_sets_all[0:1]
     print(ingredient_set_train)
     print(ingredient_set_eval)
     i = 0
     j = 0
+    args.p = 0
     while i < args.train_pool_size:
         for recipe in ingredient_set_train:
-            policy = RuleBasedPolicy('minimum', np.random.rand() * args.p, 0, 0.1 * np.random.rand(), None,
+            policy = RuleBasedPolicy('minimum', np.random.rand() * args.p, 0, 0, None,
                                      env_map, ingredient_support_set=recipe)
             policy_pool_train.append(policy)
             i = i + 1
     while j < args.eval_pool_size:
         for recipe in ingredient_set_eval:
-            policy = RuleBasedPolicy('minimum', np.random.rand() * args.p, 0, 0.1 * np.random.rand(), None,
+            policy = RuleBasedPolicy('minimum', np.random.rand() * args.p, 0, 0, None,
                                      env_map, ingredient_support_set=recipe)
             policy_pool_eval.append(policy)
             j = j + 1

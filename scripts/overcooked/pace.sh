@@ -2,7 +2,7 @@
 python train_.py --env-name Overcooked \
   --env_config './environment/overcooked/config/forced_coord_1_to_1_full.yaml' \
   --player-id 0 --recipe-type cross \
-  --algo ppo --num-steps 1000 --num-processes 72 --use-gae --eps 1e-8 --use-proper-time-limit \
+  --algo ppo --num-steps 1000 --num-processes 8 --use-gae --eps 1e-8 --use-proper-time-limit \
   --lr 1e-3 --entropy-coef 3e-2 --value-loss-coef 0.5 --num-epochs 4 --num-mini-batch 18 --gamma 0.99 --gae-lambda 0.95 \
   --max-grad-norm 15.0 \
   --num-env-steps 30000000 \
@@ -14,12 +14,8 @@ python train_.py --env-name Overcooked \
   --pre-hidden-dims 128 128 --encoder-base mlp --agg-func mean --post-hidden-dims 128 \
   --latent-dim 128 --kl-coef 0 \
   --hidden-dims 128 128 --act-func relu \
-  --train-pool-size 18 --eval-pool-size 9 \
-  --rule-based-opponents 18 \
-  --auxiliary-policy-cls-coef 1.0 \
-  --policy-cls-reward-coef 0.2 --policy-cls-reward-type accuracy --policy-cls-reward-mode max_full --policy-cls-warmup-steps 1000000 \
-  --policy-cls-reward-decay-steps 25000000 \
-  --visit-reward-coef 0.0 --visit-reward-type episode \
+  --train-pool-size 2 --eval-pool-size 1 \
+  --rule-based-opponents 2 \
   --history-middle-sampling \
   --merge-encoder-computation \
   --history-full-size 5 \

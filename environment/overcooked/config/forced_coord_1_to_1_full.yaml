@@ -9,8 +9,8 @@ recipes : [ "LettuceOnionSalad",
             "TomatoCarrotSalad",
             "PotatoBroccoliSalad",
             ]
-obs_spaces: dense_partial
-obs_range: 8
+obs_spaces: dense
+obs_range: 13
 num_agents: 2
 interact_reward: 0.5
 progress_reward: 1.0

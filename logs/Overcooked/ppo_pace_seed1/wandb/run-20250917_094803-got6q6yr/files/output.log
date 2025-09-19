@@ -1,0 +1,652 @@
+Updates 0, num timesteps 8000, FPS 267
+ Last 200 training episodes: mean/median reward -7.2875/-7.2875, min/max reward -7.3300/-7.2450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 1, num timesteps 16000, FPS 272
+ Last 200 training episodes: mean/median reward -7.2375/-7.2375, min/max reward -7.2700/-7.2050
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 2, num timesteps 24000, FPS 288
+ Last 200 training episodes: mean/median reward -7.2225/-7.2225, min/max reward -7.2350/-7.2100
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 3, num timesteps 32000, FPS 285
+ Last 200 training episodes: mean/median reward -7.1300/-7.1300, min/max reward -7.1450/-7.1150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 4, num timesteps 40000, FPS 285
+ Last 200 training episodes: mean/median reward -7.0875/-7.0875, min/max reward -7.1000/-7.0750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 5, num timesteps 48000, FPS 279
+ Last 200 training episodes: mean/median reward -7.0950/-7.0950, min/max reward -7.1150/-7.0750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 6, num timesteps 56000, FPS 274
+ Last 200 training episodes: mean/median reward -7.0900/-7.0900, min/max reward -7.1050/-7.0750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 7, num timesteps 64000, FPS 277
+ Last 200 training episodes: mean/median reward -7.0475/-7.0475, min/max reward -7.0700/-7.0250
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 8, num timesteps 72000, FPS 275
+ Last 200 training episodes: mean/median reward -6.9875/-6.9875, min/max reward -6.9950/-6.9800
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 9, num timesteps 80000, FPS 280
+ Last 200 training episodes: mean/median reward -6.9050/-6.9050, min/max reward -6.9100/-6.9000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 10, num timesteps 88000, FPS 266
+ Last 200 training episodes: mean/median reward -6.8900/-6.8900, min/max reward -6.9300/-6.8500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 11, num timesteps 96000, FPS 275
+ Last 200 training episodes: mean/median reward -6.8775/-6.8775, min/max reward -6.9000/-6.8550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -7.1, 'reward_per_opponent': array([-7.1]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 12, num timesteps 104000, FPS 255
+ Last 200 training episodes: mean/median reward -6.9150/-6.9150, min/max reward -6.9350/-6.8950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 13, num timesteps 112000, FPS 277
+ Last 200 training episodes: mean/median reward -6.8750/-6.8750, min/max reward -6.9150/-6.8350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 14, num timesteps 120000, FPS 277
+ Last 200 training episodes: mean/median reward -6.8425/-6.8425, min/max reward -6.8900/-6.7950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 15, num timesteps 128000, FPS 276
+ Last 200 training episodes: mean/median reward -6.8600/-6.8600, min/max reward -6.8650/-6.8550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 16, num timesteps 136000, FPS 274
+ Last 200 training episodes: mean/median reward -6.8775/-6.8775, min/max reward -6.9000/-6.8550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 17, num timesteps 144000, FPS 261
+ Last 200 training episodes: mean/median reward -6.8450/-6.8450, min/max reward -6.8750/-6.8150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 18, num timesteps 152000, FPS 277
+ Last 200 training episodes: mean/median reward -6.8850/-6.8850, min/max reward -6.8850/-6.8850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 19, num timesteps 160000, FPS 272
+ Last 200 training episodes: mean/median reward -6.8500/-6.8500, min/max reward -6.8950/-6.8050
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 20, num timesteps 168000, FPS 295
+ Last 200 training episodes: mean/median reward -6.8775/-6.8775, min/max reward -6.8950/-6.8600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 21, num timesteps 176000, FPS 282
+ Last 200 training episodes: mean/median reward -6.8800/-6.8800, min/max reward -6.8850/-6.8750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 22, num timesteps 184000, FPS 274
+ Last 200 training episodes: mean/median reward -6.8700/-6.8700, min/max reward -6.9200/-6.8200
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 23, num timesteps 192000, FPS 274
+ Last 200 training episodes: mean/median reward -6.8650/-6.8650, min/max reward -6.8900/-6.8400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.7, 'reward_per_opponent': array([-6.7]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 24, num timesteps 200000, FPS 270
+ Last 200 training episodes: mean/median reward -6.8875/-6.8875, min/max reward -6.9200/-6.8550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 25, num timesteps 208000, FPS 291
+ Last 200 training episodes: mean/median reward -6.8550/-6.8550, min/max reward -6.8700/-6.8400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 26, num timesteps 216000, FPS 281
+ Last 200 training episodes: mean/median reward -6.8425/-6.8425, min/max reward -6.9000/-6.7850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 27, num timesteps 224000, FPS 283
+ Last 200 training episodes: mean/median reward -6.8200/-6.8200, min/max reward -6.8500/-6.7900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 28, num timesteps 232000, FPS 287
+ Last 200 training episodes: mean/median reward -6.8000/-6.8000, min/max reward -6.8100/-6.7900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 29, num timesteps 240000, FPS 291
+ Last 200 training episodes: mean/median reward -6.8075/-6.8075, min/max reward -6.8500/-6.7650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 30, num timesteps 248000, FPS 292
+ Last 200 training episodes: mean/median reward -6.8125/-6.8125, min/max reward -6.8200/-6.8050
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 31, num timesteps 256000, FPS 281
+ Last 200 training episodes: mean/median reward -6.7900/-6.7900, min/max reward -6.8350/-6.7450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 32, num timesteps 264000, FPS 275
+ Last 200 training episodes: mean/median reward -6.8000/-6.8000, min/max reward -6.8200/-6.7800
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 33, num timesteps 272000, FPS 265
+ Last 200 training episodes: mean/median reward -6.7475/-6.7475, min/max reward -6.7700/-6.7250
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 34, num timesteps 280000, FPS 282
+ Last 200 training episodes: mean/median reward -6.7700/-6.7700, min/max reward -6.8200/-6.7200
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 35, num timesteps 288000, FPS 277
+ Last 200 training episodes: mean/median reward -6.7325/-6.7325, min/max reward -6.7400/-6.7250
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 36, num timesteps 296000, FPS 290
+ Last 200 training episodes: mean/median reward -6.6800/-6.6800, min/max reward -6.6950/-6.6650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.6, 'reward_per_opponent': array([-6.6]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 37, num timesteps 304000, FPS 255
+ Last 200 training episodes: mean/median reward -6.6950/-6.6950, min/max reward -6.7200/-6.6700
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 38, num timesteps 312000, FPS 281
+ Last 200 training episodes: mean/median reward -6.7000/-6.7000, min/max reward -6.7050/-6.6950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 39, num timesteps 320000, FPS 292
+ Last 200 training episodes: mean/median reward -6.6500/-6.6500, min/max reward -6.6650/-6.6350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 40, num timesteps 328000, FPS 283
+ Last 200 training episodes: mean/median reward -6.6575/-6.6575, min/max reward -6.6750/-6.6400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 41, num timesteps 336000, FPS 278
+ Last 200 training episodes: mean/median reward -6.7025/-6.7025, min/max reward -6.7500/-6.6550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 42, num timesteps 344000, FPS 273
+ Last 200 training episodes: mean/median reward -6.6600/-6.6600, min/max reward -6.6600/-6.6600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 43, num timesteps 352000, FPS 274
+ Last 200 training episodes: mean/median reward -6.6350/-6.6350, min/max reward -6.6850/-6.5850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 44, num timesteps 360000, FPS 280
+ Last 200 training episodes: mean/median reward -6.5900/-6.5900, min/max reward -6.5950/-6.5850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 45, num timesteps 368000, FPS 268
+ Last 200 training episodes: mean/median reward -6.6075/-6.6075, min/max reward -6.6500/-6.5650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 46, num timesteps 376000, FPS 282
+ Last 200 training episodes: mean/median reward -6.5350/-6.5350, min/max reward -6.5400/-6.5300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 47, num timesteps 384000, FPS 284
+ Last 200 training episodes: mean/median reward -6.5625/-6.5625, min/max reward -6.5650/-6.5600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 48, num timesteps 392000, FPS 276
+ Last 200 training episodes: mean/median reward -6.5325/-6.5325, min/max reward -6.5750/-6.4900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.3, 'reward_per_opponent': array([-6.3]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 49, num timesteps 400000, FPS 273
+ Last 200 training episodes: mean/median reward -6.5075/-6.5075, min/max reward -6.5250/-6.4900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 50, num timesteps 408000, FPS 283
+ Last 200 training episodes: mean/median reward -6.5225/-6.5225, min/max reward -6.5550/-6.4900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 51, num timesteps 416000, FPS 289
+ Last 200 training episodes: mean/median reward -6.5075/-6.5075, min/max reward -6.5650/-6.4500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 52, num timesteps 424000, FPS 279
+ Last 200 training episodes: mean/median reward -6.4675/-6.4675, min/max reward -6.4850/-6.4500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 53, num timesteps 432000, FPS 291
+ Last 200 training episodes: mean/median reward -6.5150/-6.5150, min/max reward -6.5900/-6.4400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 54, num timesteps 440000, FPS 277
+ Last 200 training episodes: mean/median reward -6.4700/-6.4700, min/max reward -6.4700/-6.4700
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 55, num timesteps 448000, FPS 289
+ Last 200 training episodes: mean/median reward -6.4475/-6.4475, min/max reward -6.5100/-6.3850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 56, num timesteps 456000, FPS 287
+ Last 200 training episodes: mean/median reward -6.4925/-6.4925, min/max reward -6.5300/-6.4550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 57, num timesteps 464000, FPS 280
+ Last 200 training episodes: mean/median reward -6.4475/-6.4475, min/max reward -6.4650/-6.4300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 58, num timesteps 472000, FPS 277
+ Last 200 training episodes: mean/median reward -6.4275/-6.4275, min/max reward -6.4950/-6.3600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 59, num timesteps 480000, FPS 278
+ Last 200 training episodes: mean/median reward -6.4650/-6.4650, min/max reward -6.5550/-6.3750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 60, num timesteps 488000, FPS 285
+ Last 200 training episodes: mean/median reward -6.4325/-6.4325, min/max reward -6.5000/-6.3650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 61, num timesteps 496000, FPS 283
+ Last 200 training episodes: mean/median reward -6.3825/-6.3825, min/max reward -6.4600/-6.3050
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.6, 'reward_per_opponent': array([-6.6]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 62, num timesteps 504000, FPS 253
+ Last 200 training episodes: mean/median reward -6.3350/-6.3350, min/max reward -6.3550/-6.3150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 63, num timesteps 512000, FPS 276
+ Last 200 training episodes: mean/median reward -6.3650/-6.3650, min/max reward -6.4150/-6.3150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 64, num timesteps 520000, FPS 278
+ Last 200 training episodes: mean/median reward -6.4600/-6.4600, min/max reward -6.4800/-6.4400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 65, num timesteps 528000, FPS 266
+ Last 200 training episodes: mean/median reward -6.4150/-6.4150, min/max reward -6.4200/-6.4100
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 66, num timesteps 536000, FPS 279
+ Last 200 training episodes: mean/median reward -6.4175/-6.4175, min/max reward -6.5050/-6.3300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 67, num timesteps 544000, FPS 284
+ Last 200 training episodes: mean/median reward -6.4075/-6.4075, min/max reward -6.4700/-6.3450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 68, num timesteps 552000, FPS 280
+ Last 200 training episodes: mean/median reward -6.4175/-6.4175, min/max reward -6.4350/-6.4000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 69, num timesteps 560000, FPS 277
+ Last 200 training episodes: mean/median reward -6.3850/-6.3850, min/max reward -6.4250/-6.3450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 70, num timesteps 568000, FPS 269
+ Last 200 training episodes: mean/median reward -6.4200/-6.4200, min/max reward -6.4300/-6.4100
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 71, num timesteps 576000, FPS 268
+ Last 200 training episodes: mean/median reward -6.4425/-6.4425, min/max reward -6.4750/-6.4100
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 72, num timesteps 584000, FPS 282
+ Last 200 training episodes: mean/median reward -6.3925/-6.3925, min/max reward -6.4050/-6.3800
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 73, num timesteps 592000, FPS 281
+ Last 200 training episodes: mean/median reward -6.3650/-6.3650, min/max reward -6.4300/-6.3000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.3, 'reward_per_opponent': array([-6.3]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 74, num timesteps 600000, FPS 260
+ Last 200 training episodes: mean/median reward -6.3800/-6.3800, min/max reward -6.4150/-6.3450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 75, num timesteps 608000, FPS 290
+ Last 200 training episodes: mean/median reward -6.4225/-6.4225, min/max reward -6.4750/-6.3700
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 76, num timesteps 616000, FPS 289
+ Last 200 training episodes: mean/median reward -6.4525/-6.4525, min/max reward -6.4700/-6.4350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 77, num timesteps 624000, FPS 273
+ Last 200 training episodes: mean/median reward -6.5525/-6.5525, min/max reward -6.6150/-6.4900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 78, num timesteps 632000, FPS 286
+ Last 200 training episodes: mean/median reward -6.5200/-6.5200, min/max reward -6.5600/-6.4800
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 79, num timesteps 640000, FPS 268
+ Last 200 training episodes: mean/median reward -6.4975/-6.4975, min/max reward -6.5000/-6.4950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 80, num timesteps 648000, FPS 265
+ Last 200 training episodes: mean/median reward -6.5200/-6.5200, min/max reward -6.5550/-6.4850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 81, num timesteps 656000, FPS 270
+ Last 200 training episodes: mean/median reward -6.4700/-6.4700, min/max reward -6.5200/-6.4200
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 82, num timesteps 664000, FPS 278
+ Last 200 training episodes: mean/median reward -6.4925/-6.4925, min/max reward -6.4950/-6.4900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 83, num timesteps 672000, FPS 269
+ Last 200 training episodes: mean/median reward -6.5050/-6.5050, min/max reward -6.5200/-6.4900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 84, num timesteps 680000, FPS 277
+ Last 200 training episodes: mean/median reward -6.5850/-6.5850, min/max reward -6.6100/-6.5600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 85, num timesteps 688000, FPS 271
+ Last 200 training episodes: mean/median reward -6.5000/-6.5000, min/max reward -6.5550/-6.4450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 86, num timesteps 696000, FPS 293
+ Last 200 training episodes: mean/median reward -6.5275/-6.5275, min/max reward -6.5550/-6.5000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.5, 'reward_per_opponent': array([-6.5]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 87, num timesteps 704000, FPS 265
+ Last 200 training episodes: mean/median reward -6.5200/-6.5200, min/max reward -6.5650/-6.4750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 88, num timesteps 712000, FPS 284
+ Last 200 training episodes: mean/median reward -6.5100/-6.5100, min/max reward -6.5250/-6.4950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 89, num timesteps 720000, FPS 286
+ Last 200 training episodes: mean/median reward -6.5550/-6.5550, min/max reward -6.5600/-6.5500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 90, num timesteps 728000, FPS 272
+ Last 200 training episodes: mean/median reward -6.5000/-6.5000, min/max reward -6.5500/-6.4500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 91, num timesteps 736000, FPS 280
+ Last 200 training episodes: mean/median reward -6.5375/-6.5375, min/max reward -6.5650/-6.5100
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 92, num timesteps 744000, FPS 288
+ Last 200 training episodes: mean/median reward -6.5800/-6.5800, min/max reward -6.6050/-6.5550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 93, num timesteps 752000, FPS 284
+ Last 200 training episodes: mean/median reward -6.5525/-6.5525, min/max reward -6.5800/-6.5250
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 94, num timesteps 760000, FPS 274
+ Last 200 training episodes: mean/median reward -6.5675/-6.5675, min/max reward -6.5750/-6.5600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 95, num timesteps 768000, FPS 273
+ Last 200 training episodes: mean/median reward -6.5600/-6.5600, min/max reward -6.5900/-6.5300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 96, num timesteps 776000, FPS 267
+ Last 200 training episodes: mean/median reward -6.6025/-6.6025, min/max reward -6.6150/-6.5900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 97, num timesteps 784000, FPS 286
+ Last 200 training episodes: mean/median reward -6.5875/-6.5875, min/max reward -6.5900/-6.5850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 98, num timesteps 792000, FPS 287
+ Last 200 training episodes: mean/median reward -6.6450/-6.6450, min/max reward -6.6450/-6.6450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.4, 'reward_per_opponent': array([-6.4]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 99, num timesteps 800000, FPS 276
+ Last 200 training episodes: mean/median reward -6.5975/-6.5975, min/max reward -6.6200/-6.5750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 100, num timesteps 808000, FPS 292
+ Last 200 training episodes: mean/median reward -6.5775/-6.5775, min/max reward -6.6100/-6.5450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 101, num timesteps 816000, FPS 284
+ Last 200 training episodes: mean/median reward -6.5000/-6.5000, min/max reward -6.5500/-6.4500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 102, num timesteps 824000, FPS 289
+ Last 200 training episodes: mean/median reward -6.4975/-6.4975, min/max reward -6.5650/-6.4300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 103, num timesteps 832000, FPS 288
+ Last 200 training episodes: mean/median reward -6.6075/-6.6075, min/max reward -6.6400/-6.5750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 104, num timesteps 840000, FPS 262
+ Last 200 training episodes: mean/median reward -6.5550/-6.5550, min/max reward -6.6100/-6.5000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 105, num timesteps 848000, FPS 273
+ Last 200 training episodes: mean/median reward -6.6425/-6.6425, min/max reward -6.6650/-6.6200
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 106, num timesteps 856000, FPS 278
+ Last 200 training episodes: mean/median reward -6.5800/-6.5800, min/max reward -6.6000/-6.5600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 107, num timesteps 864000, FPS 279
+ Last 200 training episodes: mean/median reward -6.5175/-6.5175, min/max reward -6.5350/-6.5000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 108, num timesteps 872000, FPS 286
+ Last 200 training episodes: mean/median reward -6.5600/-6.5600, min/max reward -6.5850/-6.5350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 109, num timesteps 880000, FPS 283
+ Last 200 training episodes: mean/median reward -6.5725/-6.5725, min/max reward -6.5900/-6.5550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 110, num timesteps 888000, FPS 272
+ Last 200 training episodes: mean/median reward -6.6050/-6.6050, min/max reward -6.6050/-6.6050
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 111, num timesteps 896000, FPS 268
+ Last 200 training episodes: mean/median reward -6.6000/-6.6000, min/max reward -6.6250/-6.5750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.7, 'reward_per_opponent': array([-6.7]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 112, num timesteps 904000, FPS 256
+ Last 200 training episodes: mean/median reward -6.5950/-6.5950, min/max reward -6.6200/-6.5700
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 113, num timesteps 912000, FPS 282
+ Last 200 training episodes: mean/median reward -6.6475/-6.6475, min/max reward -6.6550/-6.6400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 114, num timesteps 920000, FPS 275
+ Last 200 training episodes: mean/median reward -6.5350/-6.5350, min/max reward -6.6050/-6.4650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 115, num timesteps 928000, FPS 288
+ Last 200 training episodes: mean/median reward -6.5050/-6.5050, min/max reward -6.5200/-6.4900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 116, num timesteps 936000, FPS 278
+ Last 200 training episodes: mean/median reward -6.5650/-6.5650, min/max reward -6.5900/-6.5400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 117, num timesteps 944000, FPS 294
+ Last 200 training episodes: mean/median reward -6.5025/-6.5025, min/max reward -6.5300/-6.4750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 118, num timesteps 952000, FPS 269
+ Last 200 training episodes: mean/median reward -6.5500/-6.5500, min/max reward -6.5900/-6.5100
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 119, num timesteps 960000, FPS 271
+ Last 200 training episodes: mean/median reward -6.5000/-6.5000, min/max reward -6.5250/-6.4750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 120, num timesteps 968000, FPS 261
+ Last 200 training episodes: mean/median reward -6.4250/-6.4250, min/max reward -6.4500/-6.4000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 121, num timesteps 976000, FPS 272
+ Last 200 training episodes: mean/median reward -6.5350/-6.5350, min/max reward -6.5350/-6.5350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 122, num timesteps 984000, FPS 275
+ Last 200 training episodes: mean/median reward -6.5550/-6.5550, min/max reward -6.6250/-6.4850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 123, num timesteps 992000, FPS 291
+ Last 200 training episodes: mean/median reward -6.6100/-6.6100, min/max reward -6.6350/-6.5850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.5, 'reward_per_opponent': array([-6.5]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 124, num timesteps 1000000, FPS 253
+ Last 200 training episodes: mean/median reward -6.5650/-6.5650, min/max reward -6.6150/-6.5150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 125, num timesteps 1008000, FPS 271
+ Last 200 training episodes: mean/median reward -6.5550/-6.5550, min/max reward -6.5750/-6.5350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 126, num timesteps 1016000, FPS 276
+ Last 200 training episodes: mean/median reward -6.5275/-6.5275, min/max reward -6.5900/-6.4650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 127, num timesteps 1024000, FPS 291
+ Last 200 training episodes: mean/median reward -6.5375/-6.5375, min/max reward -6.5600/-6.5150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 128, num timesteps 1032000, FPS 277
+ Last 200 training episodes: mean/median reward -6.5450/-6.5450, min/max reward -6.5700/-6.5200
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 129, num timesteps 1040000, FPS 272
+ Last 200 training episodes: mean/median reward -6.5850/-6.5850, min/max reward -6.6050/-6.5650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 130, num timesteps 1048000, FPS 271
+ Last 200 training episodes: mean/median reward -6.5500/-6.5500, min/max reward -6.5550/-6.5450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 131, num timesteps 1056000, FPS 272
+ Last 200 training episodes: mean/median reward -6.5525/-6.5525, min/max reward -6.5600/-6.5450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 132, num timesteps 1064000, FPS 288
+ Last 200 training episodes: mean/median reward -6.5525/-6.5525, min/max reward -6.5750/-6.5300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 133, num timesteps 1072000, FPS 275
+ Last 200 training episodes: mean/median reward -6.5825/-6.5825, min/max reward -6.6000/-6.5650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 134, num timesteps 1080000, FPS 285
+ Last 200 training episodes: mean/median reward -6.6200/-6.6200, min/max reward -6.6450/-6.5950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 135, num timesteps 1088000, FPS 281
+ Last 200 training episodes: mean/median reward -6.5500/-6.5500, min/max reward -6.5850/-6.5150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 136, num timesteps 1096000, FPS 277
+ Last 200 training episodes: mean/median reward -6.6975/-6.6975, min/max reward -6.7400/-6.6550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.4, 'reward_per_opponent': array([-6.4]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 137, num timesteps 1104000, FPS 252
+ Last 200 training episodes: mean/median reward -6.6225/-6.6225, min/max reward -6.6550/-6.5900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 138, num timesteps 1112000, FPS 279
+ Last 200 training episodes: mean/median reward -6.6525/-6.6525, min/max reward -6.6750/-6.6300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 139, num timesteps 1120000, FPS 272
+ Last 200 training episodes: mean/median reward -6.6250/-6.6250, min/max reward -6.6650/-6.5850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 140, num timesteps 1128000, FPS 276
+ Last 200 training episodes: mean/median reward -6.5875/-6.5875, min/max reward -6.5900/-6.5850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 141, num timesteps 1136000, FPS 264
+ Last 200 training episodes: mean/median reward -6.6275/-6.6275, min/max reward -6.6550/-6.6000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 142, num timesteps 1144000, FPS 271
+ Last 200 training episodes: mean/median reward -6.7300/-6.7300, min/max reward -6.7400/-6.7200
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 143, num timesteps 1152000, FPS 284
+ Last 200 training episodes: mean/median reward -6.6000/-6.6000, min/max reward -6.6200/-6.5800
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 144, num timesteps 1160000, FPS 287
+ Last 200 training episodes: mean/median reward -6.6575/-6.6575, min/max reward -6.6700/-6.6450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 145, num timesteps 1168000, FPS 281
+ Last 200 training episodes: mean/median reward -6.6550/-6.6550, min/max reward -6.6650/-6.6450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 146, num timesteps 1176000, FPS 289
+ Last 200 training episodes: mean/median reward -6.7125/-6.7125, min/max reward -6.7750/-6.6500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 147, num timesteps 1184000, FPS 286
+ Last 200 training episodes: mean/median reward -6.6400/-6.6400, min/max reward -6.6850/-6.5950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 148, num timesteps 1192000, FPS 275
+ Last 200 training episodes: mean/median reward -6.6925/-6.6925, min/max reward -6.7450/-6.6400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.6, 'reward_per_opponent': array([-6.6]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 149, num timesteps 1200000, FPS 264
+ Last 200 training episodes: mean/median reward -6.6150/-6.6150, min/max reward -6.6150/-6.6150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 150, num timesteps 1208000, FPS 281
+ Last 200 training episodes: mean/median reward -6.6275/-6.6275, min/max reward -6.6550/-6.6000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 151, num timesteps 1216000, FPS 293
+ Last 200 training episodes: mean/median reward -6.6175/-6.6175, min/max reward -6.6500/-6.5850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 152, num timesteps 1224000, FPS 287
+ Last 200 training episodes: mean/median reward -6.6575/-6.6575, min/max reward -6.6600/-6.6550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 153, num timesteps 1232000, FPS 274
+ Last 200 training episodes: mean/median reward -6.6325/-6.6325, min/max reward -6.6550/-6.6100
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 154, num timesteps 1240000, FPS 290
+ Last 200 training episodes: mean/median reward -6.6725/-6.6725, min/max reward -6.7250/-6.6200
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 155, num timesteps 1248000, FPS 292
+ Last 200 training episodes: mean/median reward -6.6700/-6.6700, min/max reward -6.6750/-6.6650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 156, num timesteps 1256000, FPS 295
+ Last 200 training episodes: mean/median reward -6.6075/-6.6075, min/max reward -6.6200/-6.5950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 157, num timesteps 1264000, FPS 282
+ Last 200 training episodes: mean/median reward -6.6225/-6.6225, min/max reward -6.6850/-6.5600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 158, num timesteps 1272000, FPS 284
+ Last 200 training episodes: mean/median reward -6.6200/-6.6200, min/max reward -6.7100/-6.5300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 159, num timesteps 1280000, FPS 285
+ Last 200 training episodes: mean/median reward -6.6600/-6.6600, min/max reward -6.6650/-6.6550
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 160, num timesteps 1288000, FPS 290
+ Last 200 training episodes: mean/median reward -6.7000/-6.7000, min/max reward -6.7100/-6.6900
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 161, num timesteps 1296000, FPS 296
+ Last 200 training episodes: mean/median reward -6.6575/-6.6575, min/max reward -6.6700/-6.6450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.3, 'reward_per_opponent': array([-6.3]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 162, num timesteps 1304000, FPS 282
+ Last 200 training episodes: mean/median reward -6.6125/-6.6125, min/max reward -6.6550/-6.5700
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 163, num timesteps 1312000, FPS 304
+ Last 200 training episodes: mean/median reward -6.6650/-6.6650, min/max reward -6.6950/-6.6350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 164, num timesteps 1320000, FPS 300
+ Last 200 training episodes: mean/median reward -6.6650/-6.6650, min/max reward -6.6700/-6.6600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 165, num timesteps 1328000, FPS 302
+ Last 200 training episodes: mean/median reward -6.6775/-6.6775, min/max reward -6.6800/-6.6750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 166, num timesteps 1336000, FPS 302
+ Last 200 training episodes: mean/median reward -6.6975/-6.6975, min/max reward -6.7550/-6.6400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 167, num timesteps 1344000, FPS 294
+ Last 200 training episodes: mean/median reward -6.6925/-6.6925, min/max reward -6.7350/-6.6500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 168, num timesteps 1352000, FPS 303
+ Last 200 training episodes: mean/median reward -6.7300/-6.7300, min/max reward -6.7600/-6.7000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 169, num timesteps 1360000, FPS 304
+ Last 200 training episodes: mean/median reward -6.7600/-6.7600, min/max reward -6.7900/-6.7300
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 170, num timesteps 1368000, FPS 298
+ Last 200 training episodes: mean/median reward -6.7325/-6.7325, min/max reward -6.7850/-6.6800
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 171, num timesteps 1376000, FPS 289
+ Last 200 training episodes: mean/median reward -6.7525/-6.7525, min/max reward -6.8200/-6.6850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 172, num timesteps 1384000, FPS 298
+ Last 200 training episodes: mean/median reward -6.7925/-6.7925, min/max reward -6.8500/-6.7350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 173, num timesteps 1392000, FPS 289
+ Last 200 training episodes: mean/median reward -6.8425/-6.8425, min/max reward -6.8900/-6.7950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.9, 'reward_per_opponent': array([-6.9]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 174, num timesteps 1400000, FPS 274
+ Last 200 training episodes: mean/median reward -6.8350/-6.8350, min/max reward -6.8900/-6.7800
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 175, num timesteps 1408000, FPS 297
+ Last 200 training episodes: mean/median reward -6.8050/-6.8050, min/max reward -6.8750/-6.7350
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 176, num timesteps 1416000, FPS 296
+ Last 200 training episodes: mean/median reward -6.8200/-6.8200, min/max reward -6.8700/-6.7700
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 177, num timesteps 1424000, FPS 288
+ Last 200 training episodes: mean/median reward -6.7400/-6.7400, min/max reward -6.7800/-6.7000
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 178, num timesteps 1432000, FPS 277
+ Last 200 training episodes: mean/median reward -6.7375/-6.7375, min/max reward -6.7600/-6.7150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 179, num timesteps 1440000, FPS 282
+ Last 200 training episodes: mean/median reward -6.7850/-6.7850, min/max reward -6.8050/-6.7650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 180, num timesteps 1448000, FPS 289
+ Last 200 training episodes: mean/median reward -6.8075/-6.8075, min/max reward -6.8650/-6.7500
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 181, num timesteps 1456000, FPS 299
+ Last 200 training episodes: mean/median reward -6.8000/-6.8000, min/max reward -6.8050/-6.7950
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 182, num timesteps 1464000, FPS 299
+ Last 200 training episodes: mean/median reward -6.7750/-6.7750, min/max reward -6.7850/-6.7650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 183, num timesteps 1472000, FPS 305
+ Last 200 training episodes: mean/median reward -6.8050/-6.8050, min/max reward -6.8250/-6.7850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 184, num timesteps 1480000, FPS 292
+ Last 200 training episodes: mean/median reward -6.6925/-6.6925, min/max reward -6.7000/-6.6850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 185, num timesteps 1488000, FPS 285
+ Last 200 training episodes: mean/median reward -6.7625/-6.7625, min/max reward -6.7650/-6.7600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 186, num timesteps 1496000, FPS 301
+ Last 200 training episodes: mean/median reward -6.8200/-6.8200, min/max reward -6.8600/-6.7800
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.5, 'reward_per_opponent': array([-6.5]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 187, num timesteps 1504000, FPS 272
+ Last 200 training episodes: mean/median reward -6.7800/-6.7800, min/max reward -6.7950/-6.7650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 188, num timesteps 1512000, FPS 300
+ Last 200 training episodes: mean/median reward -6.7250/-6.7250, min/max reward -6.7300/-6.7200
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 189, num timesteps 1520000, FPS 296
+ Last 200 training episodes: mean/median reward -6.7200/-6.7200, min/max reward -6.7550/-6.6850
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 190, num timesteps 1528000, FPS 291
+ Last 200 training episodes: mean/median reward -6.7275/-6.7275, min/max reward -6.7500/-6.7050
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 191, num timesteps 1536000, FPS 279
+ Last 200 training episodes: mean/median reward -6.7075/-6.7075, min/max reward -6.7100/-6.7050
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 192, num timesteps 1544000, FPS 289
+ Last 200 training episodes: mean/median reward -6.6750/-6.6750, min/max reward -6.7350/-6.6150
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 193, num timesteps 1552000, FPS 288
+ Last 200 training episodes: mean/median reward -6.7000/-6.7000, min/max reward -6.7350/-6.6650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 194, num timesteps 1560000, FPS 279
+ Last 200 training episodes: mean/median reward -6.6900/-6.6900, min/max reward -6.7150/-6.6650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 195, num timesteps 1568000, FPS 298
+ Last 200 training episodes: mean/median reward -6.6725/-6.6725, min/max reward -6.6800/-6.6650
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 196, num timesteps 1576000, FPS 288
+ Last 200 training episodes: mean/median reward -6.7150/-6.7150, min/max reward -6.7200/-6.7100
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 197, num timesteps 1584000, FPS 291
+ Last 200 training episodes: mean/median reward -6.6825/-6.6825, min/max reward -6.6950/-6.6700
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 198, num timesteps 1592000, FPS 311
+ Last 200 training episodes: mean/median reward -6.6350/-6.6350, min/max reward -6.7100/-6.5600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+ Evaluation using 5 episodes: {'reward': -6.5, 'reward_per_opponent': array([-6.5]), 'success_rate': 0.0, 'success_rate_per_opponent': array([0.])}
+All success rates, by opponent policy: (0.0,)
+Updates 199, num timesteps 1600000, FPS 285
+ Last 200 training episodes: mean/median reward -6.6475/-6.6475, min/max reward -6.6900/-6.6050
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 200, num timesteps 1608000, FPS 304
+ Last 200 training episodes: mean/median reward -6.5875/-6.5875, min/max reward -6.6350/-6.5400
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 201, num timesteps 1616000, FPS 282
+ Last 200 training episodes: mean/median reward -6.6125/-6.6125, min/max reward -6.6800/-6.5450
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 202, num timesteps 1624000, FPS 274
+ Last 200 training episodes: mean/median reward -6.6775/-6.6775, min/max reward -6.6800/-6.6750
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Updates 203, num timesteps 1632000, FPS 267
+ Last 200 training episodes: mean/median reward -6.5900/-6.5900, min/max reward -6.6200/-6.5600
+Mean/median success rate: 0.00/0.00, min/max success rate: 0.00/0.00
+Traceback (most recent call last):
+  File "train_.py", line 888, in <module>
+    train_embedding(arg, train_policies, eval_policies)
+  File "train_.py", line 713, in train_embedding
+    print(
+  File "/home/asurite.ad.asu.edu/ubiswas2/anaconda3/envs/pace-orig/lib/python3.8/site-packages/wandb/sdk/lib/redirect.py", line 640, in write
+    self._old_write(data)
+KeyboardInterrupt

@@ -1,0 +1,33 @@
+# User study webapp directory (contains separate git repo)
+coop-eval-user-study/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and data
+*.log
+logs/
+data/
+wandb/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -538,7 +538,7 @@ class Encoder(nn.Module):
                 ep_mask = None
             else:
                 obs, act, ep_mask, sp_mask = storage.get_by_idx(proc_idx, period_idx, episode_idx, length_idx)
-
+            
             history = self.convert_inputs(obs, act)
 
             if storage.merge_encoder_computation:

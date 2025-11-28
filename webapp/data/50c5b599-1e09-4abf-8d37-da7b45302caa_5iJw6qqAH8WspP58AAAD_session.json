@@ -1,0 +1,12 @@
+{
+  "participant_id": "50c5b599-1e09-4abf-8d37-da7b45302caa",
+  "alias_hash": "unknown",
+  "session_id": "5iJw6qqAH8WspP58AAAD",
+  "session_ts": 1764286358.942029,
+  "start_datetime": "2025-11-27T16:32:38.942032",
+  "metadata": {
+    "model": "ppo_pace_two_ing_2_seed1",
+    "level": "default",
+    "demo": false
+  }
+}

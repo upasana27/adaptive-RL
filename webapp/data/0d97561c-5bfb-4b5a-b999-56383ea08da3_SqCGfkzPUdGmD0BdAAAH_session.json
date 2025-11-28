@@ -1,0 +1,19 @@
+{
+  "participant_id": "0d97561c-5bfb-4b5a-b999-56383ea08da3",
+  "alias_hash": "unknown",
+  "session_id": "SqCGfkzPUdGmD0BdAAAH",
+  "session_ts": 1764276544.2731106,
+  "start_datetime": "2025-11-27T13:49:04.273112",
+  "metadata": {
+    "model": "ppo_pace_seed1",
+    "level": "default",
+    "demo": false
+  },
+  "end_datetime": "2025-11-27T13:49:04.401437",
+  "duration": 0.12833738327026367,
+  "summary": {
+    "steps": 1,
+    "total_reward": 0,
+    "duration": 0.1282942295074463
+  }
+}

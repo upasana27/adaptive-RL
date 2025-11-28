@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Overcooked Study</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>Practice Round</h2>
+        <div class="instructions">
+            <p><strong>Controls:</strong></p>
+            <ul>
+                <li>↑ ↓ ← → : Move around</li>
+                <li>Space: Interact (pick up/drop items)</li>
+            </ul>
+            <p>Try the controls below. This is just practice - your performance here won't be recorded.</p>
+        </div>
+
+        <div class="game-container">
+            <canvas id="gameCanvas" width="700" height="1300"></canvas>
+            <div id="status" class="status">Connecting...</div>
+        </div>
+
+        <button id="startDemo" class="btn-primary">Start Practice</button>
+        <a href="/game" class="btn-secondary" style="display: none;" id="continueBtn">Continue to Study →</a>
+    </div>
+
+    <script>
+        const PARTICIPANT_ID = "{{ participant_id }}";
+        const IS_DEMO = true;
+        const LEVEL_ID = "demo";
+        const MODEL_ID = null;
+    </script>
+    <script src="/static/js/game.js"></script>
+</body>
+</html>

@@ -1,4 +1,7 @@
 import os.path
+import sys
+print(sys.path)
+sys.path.append("/home/asurite.ad.asu.edu/ubiswas2/adaptive-RL")
 import random
 import re
 import numpy as np
@@ -7,9 +10,10 @@ import yaml
 from gym_cooking.cooking_world.world_objects import *
 from gym_cooking.cooking_world.abstract_classes import *
 from gym_cooking.environment.cooking_zoo import Ingred2ID
-from learning.model import LatentActor
+from learning.model import LatentPolicy
 import subprocess
-
+from environment.cooking_zoo import CookingEnvironment
+from environment import cooking_zoo
 static_objects = ['CutBoard','DeliverSquare','Divider','Plate']
 ingredients = ['Lettuce','Tomato','Potato','Onion','Carrot','Broccoli']
 dynamic_objects = ['Plate'] + ingredients
@@ -31,42 +35,112 @@ class event:
     def __str__(self):
         return f'Event(action={self.action}, dynamic_obj={self.dynamic_obj}, static_obj={self.static_obj})'
 
-
 class PretrainedPolicy:
-    def __init__(self, model_path, agent_id, is_self_play=True, batch_size=1, device='cpu'):
+    def __init__(self,level=None, num_agents=None, record=False, 
+                max_steps=None, recipes=None, obs_spaces=["dense_partial"],desire=None, obs_range=15,
+                interact_reward=0.5, progress_reward=1.0,
+                complete_reward=10.0, step_cost=0.05,model_path=None, agent_id=0, device='cpu'):
         # Lazy init. The model is loaded only when the first observation is received, in the environment process
         # This guarantees that no tensor needs to be moved across processes
         self.model_path = model_path
         self.agent_id = agent_id
-        self.actor = self.rnn_states = self.rnn_hidden_dim = None
-        self.is_self_play = is_self_play
-        self.batch_size = batch_size
+        self.num_agents = 2
+        self.possible_agents = ["player_" + str(r) for r in range(self.num_agents)]
+        self.agents = self.possible_agents[:]
+        self.peer_agent = self.agents[self.agent_id]
+        self.num_eval_policies = 1
         self.device = device
+        # self.use_policy_cls_reward = args.policy_cls_reward_coef is not None and inspect_idx is not None
+        # if self.use_policy_cls_reward:
+        #     assert args.policy_cls_reward_coef == 0.0
+        # self.policy_cls_reward_tracker = PolicyClassificationRewardTracker(args, num_eval_policies, num_eval_policies) \
+        #     if use_policy_cls_reward else Nonei
+        self.dump_latents = False
+        self.opp_policies = 1
+        self.policy = self.load(model_path)
+        self.env = cooking_zoo.parallel_env(level=level, num_agents=self.num_agents, record=False, 
+                                        max_steps=max_steps, recipes=recipes, obs_spaces=["dense_partial"],desire=desire, obs_range=15,
+                                        interact_reward=0.5, progress_reward=1.0,
+                                        complete_reward=10.0, step_cost=0.05)
+        # self.world = CookingWorld()
+    def load(self, model_path):
+        while os.path.exists(model_path):
+            # print("this is the model path", model_path)
+            device = torch.device('cpu')
+            torch.serialization.add_safe_globals([LatentPolicy])
+            policy = torch.load(model_path, map_location=device, weights_only=False)
+            return policy
+
 
     def set_id(self, aid):
         self.agent_id = aid
 
-    def __call__(self, obs):
-        if not isinstance(obs, torch.Tensor):
-            obs = torch.from_numpy(obs).float()
-        if self.batch_size == 1:
-            obs = obs.unsqueeze(0)
+    def __call__(self, world):
+        self.env.world = world
+        obs = self.env.observe(self.peer_agent)  
+        if self.policy.is_recurrent:
+            rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to(obs.device)
+        else:
+            rnn_states = None   
+        masks = torch.zeros(self.num_eval_policies, 1).to(self.device)
+        done = np.array([True] * num_eval_policies)   
         with torch.no_grad():
-            action, _, self.rnn_states, _ = self.actor.act(obs, self.rnn_states,
-                                                           torch.ones(self.batch_size, 1, device=self.device),
-                                                           None, deterministic=False)
-        return action.item() if self.batch_size == 1 else action.squeeze(-1)
-
+            if eval_history is not None:
+                all_agent_indices = 1
+                indices = 0
+                #history = (eval_history, (all_agent_indices,) + indices)
+                history = None
+                _, action, action_log_prob, rnn_states = self.policy.act(obs, rnn_states, masks, all_agent_indices, history=history, deterministic=False)
+            if self.dump_latents:
+                assert self.policy.last_latents is not None
+                assert len(policy.last_latents) == num_opp_policies
+                for i in range(num_opp_policies):
+                    eval_stats_by_opponent['latents'][i][-1].append(policy.last_latents[i].clone())
+            #policy_pred = self.policy.aux_pol_cls_head(policy.last_latents) if args.use_policy_cls_reward else None
+        if str(action.device) == 'cpu':
+            action = action.unsqueeze(-1)
+        # port env and world here, for now comment it out
+        # obs, reward, done, infos = self.env.step(action.squeeze(-1))
+        #if use_policy_cls_reward:
+         #   policy_cls_reward_tracker.advance(reward, infos, policy_pred, prev_agent_perm_all, inspect_idx)
+          #  input(f'Actual reward {reward[inspect_idx]}, policy classification reward {infos[inspect_idx]["expl_reward"]}'
+        return action.squeeze(-1)
+    # this is defined for the visualization only
+    def get_action(self,world):
+        self.env.world = world
+        obs = self.env.unwrapped.observe(self.peer_agent)  
+        if self.policy.is_recurrent:
+            rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to(obs.device)
+        else:
+            rnn_states = None   
+        masks = torch.zeros(self.num_eval_policies, 1).to('cpu')
+        done = np.array([True] * self.num_eval_policies)   
+        eval_history = None
+        with torch.no_grad():
+            if eval_history is  None:
+                all_agent_indices = 1
+                indices = 0
+                #history = (eval_history, (all_agent_indices,) + indices)
+                history = None
+                _, action, action_log_prob, rnn_states = self.policy.act(obs, rnn_states, masks, all_agent_indices, history=history, deterministic=False)
+            if self.dump_latents:
+                assert self.policy.last_latents is not None
+                assert len(policy.last_latents) == num_opp_policies
+                for i in range(num_opp_policies):
+                    eval_stats_by_opponent['latents'][i][-1].append(policy.last_latents[i].clone())
+            #policy_pred = self.policy.aux_pol_cls_head(policy.last_latents) if args.use_policy_cls_reward else None
+        if str(action.device) == 'cpu':
+            action = action.unsqueeze(-1)
+        # port env and world here, for now comment it out
+        # obs, reward, done, infos = self.env.step(action.squeeze(-1))
+        #if use_policy_cls_reward:
+         #   policy_cls_reward_tracker.advance(reward, infos, policy_pred, prev_agent_perm_all, inspect_idx)
+          #  input(f'Actual reward {reward[inspect_idx]}, policy classification reward {infos[inspect_idx]["expl_reward"]}'
+        return action.squeeze(-1)
     def reset(self):
         if self.actor is None:
             # One-time initialization
             policy = torch.load(self.model_path, map_location=self.device)
-            if self.is_self_play:
-                assert len(policy.actors) == 2, 'Separate-model self-play policy should have exactly 2 actors'
-                self.actor: LatentActor = policy.actors[self.agent_id]
-            else:
-                assert len(policy.actors) == 1, 'Joint policy should have exactly 1 actor'
-                self.actor: LatentActor = policy.actors[0]
             if policy.is_recurrent:
                 self.rnn_hidden_dim = policy.rnn_hidden_dim
                 self.rnn_states = torch.zeros(self.batch_size, self.rnn_hidden_dim, device=self.device)
@@ -75,7 +149,7 @@ class PretrainedPolicy:
 
         if self.rnn_states is not None:
             self.rnn_states.zero_()
-
+  
 
 class RuleBasedPolicy:
     def __init__(self, policy_type, nav_p, tar_p, rand_p, convention, env_name, support_set=None,
@@ -615,53 +689,6 @@ def get_train_eval_pool(args):
         print('Put', self_play_opponents, 'self-play opponents into train pool, model paths:',
               [p.model_path for p in self_play_pool[:self_play_opponents]])
     return policy_pool_train, policy_pool_eval
-def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, pool_seed=1):
-    old_state = np.random.get_state()
-    np.random.seed(pool_seed)
-
-    left_ingred = ingredients[:3]
-    right_ingred = ingredients[3:]
-    ingredient_sets_all = []
-    # for i in range(1, 2 ** len(ingredients)):
-    #     if i > (i & -i):
-    #         ingredient_sets_all.append([ingredients[j] for j in range(len(ingredients)) if (i >> j) & 1])
-
-    if recipe_type == 'full':
-        # one ingredient in left
-        for ingred in left_ingred:
-            ingredient_sets_all.append([ingred])
-        # two ingredient in left
-        for i in range(len(left_ingred)):
-            for j in range(i+1, len(left_ingred)):
-                ingredient_sets_all.append([left_ingred[i], left_ingred[j]])
-    else:
-        assert recipe_type == 'cross', f'Unknown recipe type {recipe_type}'
-
-    # one ingredient in left, one in right
-    for ingred in left_ingred:
-        for ingred2 in right_ingred:
-            ingredient_sets_all.append([ingred, ingred2])
-    print('All ingredient support sets:', ingredient_sets_all)
-    print('Corresponding indices:', [sum(1 << Ingred2ID[ingred] for ingred in ingred_set) for ingred_set in ingredient_sets_all])
-    pool = []
-    all_policy_indices = np.arange(len(ingredient_sets_all))
-    np.random.shuffle(all_policy_indices)
-    for i in range(pool_size):
-        if i >= len(all_policy_indices):
-            i = i % len(all_policy_indices)
-        ingredient_support_set = ingredient_sets_all[all_policy_indices[i] % len(ingredient_sets_all)]
-        print(f'Policy generated with support set {ingredient_support_set} and convention {None}')
-        if gen_desire:
-            policy = [int(ing in ingredient_support_set) for ing in ingredients]
-        else:
-            # policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, np.random.rand() * p_max, 0.05, None,
-            #                          env_name, ingredient_support_set=ingredient_support_set)
-            policy = RuleBasedPolicy('full', 0, 0, 0, None,
-                                     env_name, ingredient_support_set=ingredient_support_set)
-        pool.append(policy)
-
-    np.random.set_state(old_state)
-    return pool
 
 
 def load_good_self_play_policy_pool(player_id):

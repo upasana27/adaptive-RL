@@ -1,0 +1,27 @@
+# Study configuration for Cooking Zoo webapp
+# This file is auto-populated with discovered model ids under logs/Overcooked
+
+rounds_per_model: 2
+tick_rate_hz: 10
+key_map:
+  ArrowUp: 1
+  ArrowDown: 2
+  ArrowLeft: 3
+  ArrowRight: 4
+  Space: 5
+  w: 1
+  s: 2
+  a: 3
+  d: 4
+
+models:
+  - ppo_pace_seed1
+  - ppo_pace_two_ing_1_seed1
+  - ppo_pace_two_ing_2_seed1
+  - ppo_pace_two_ing_3_seed1
+
+# levels: empty -> auto-discover from environment/overcooked or set explicitly
+levels: []
+
+# admin token (set in environment variable WEBAPP_ADMIN_TOKEN for production)
+admin_token: "changeme"

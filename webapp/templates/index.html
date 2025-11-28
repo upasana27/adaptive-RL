@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overcooked User Study</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Overcooked Collaboration Study</h1>
+        <div class="content">
+            <p>Thank you for participating in our study on human-AI collaboration!</p>
+            <p>You will play several rounds of an Overcooked-style cooking game with different AI partners. Your task is to work together to prepare dishes as efficiently as possible.</p>
+            
+            <h3>Before you begin:</h3>
+            <ul>
+                <li>The study takes approximately 15-20 minutes</li>
+                <li>You'll play 8 rounds total (2 rounds with each of 4 AI partners)</li>
+                <li>Use arrow keys to move and Space to interact</li>
+                <li>Your responses will be anonymized</li>
+            </ul>
+
+            <form action="/start" method="POST" class="start-form">
+                <label for="alias">Please enter a nickname or alias:</label>
+                <input type="text" id="alias" name="alias" required placeholder="e.g., Player123">
+                
+                <div class="consent">
+                    <label>
+                        <input type="checkbox" name="consent" required>
+                        I consent to participate and understand my data will be used for research purposes
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn-primary">Start Study</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

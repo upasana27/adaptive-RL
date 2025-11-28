@@ -1,0 +1,19 @@
+{
+  "participant_id": "36132d44-e249-45f5-a3ae-e480c0dfd6cf",
+  "alias_hash": "unknown",
+  "session_id": "j9Im3nYY0DvgYY8iAAAB",
+  "session_ts": 1764286043.7394357,
+  "start_datetime": "2025-11-27T16:27:23.739438",
+  "metadata": {
+    "model": null,
+    "level": "demo",
+    "demo": true
+  },
+  "end_datetime": "2025-11-27T16:27:28.844590",
+  "duration": 5.105166435241699,
+  "summary": {
+    "steps": 50,
+    "total_reward": 1.5000000000000002,
+    "duration": 5.105123519897461
+  }
+}

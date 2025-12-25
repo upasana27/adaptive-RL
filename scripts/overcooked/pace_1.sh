@@ -1,7 +1,7 @@
 #!/bin/bash
 python train_.py --env-name Overcooked \
   --env_config './environment/overcooked/config/fc_small_test.yaml' \
-  --player-id 0 --recipe-type cross \
+  --player-id 1 --recipe-type cross \
   --algo ppo --num-steps 1000 --num-processes 12 --use-gae --eps 1e-8 --use-proper-time-limit \
   --lr 1e-3 --entropy-coef 3e-2 --value-loss-coef 0.5 --num-epochs 4 --num-mini-batch 18 --gamma 0.99 --gae-lambda 0.95 \
   --max-grad-norm 15.0 \
@@ -14,8 +14,8 @@ python train_.py --env-name Overcooked \
   --pre-hidden-dims 128 128 --encoder-base mlp --agg-func mean --post-hidden-dims 128 \
   --latent-dim 128 --kl-coef 0 \
   --hidden-dims 128 128 --act-func relu \
-  --train-pool-size 2 --eval-pool-size 1 \
-  --rule-based-opponents 2 \
+  --train-pool-size 3 --eval-pool-size 3 \
+  --rule-based-opponents 3 \
   --policy-cls-reward-coef 0.2 --policy-cls-reward-type accuracy --policy-cls-reward-mode max_full --policy-cls-warmup-steps 1000000 \
   --policy-cls-reward-decay-steps 25000000 \
   --history-middle-sampling \

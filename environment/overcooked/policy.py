@@ -7,11 +7,10 @@ import yaml
 from gym_cooking.cooking_world.world_objects import *
 from gym_cooking.cooking_world.abstract_classes import *
 from gym_cooking.environment.cooking_zoo import Ingred2ID
-from learning.model import LatentActor
 import subprocess
-
+from learning.storage_ import PeriodicHistoryStorage
 static_objects = ['CutBoard','DeliverSquare','Divider','Plate']
-ingredients = ['Lettuce','Tomato','Potato','Onion','Carrot','Broccoli']
+ingredients = ['Lettuce','Potato','Tomato','Onion','Broccoli','Carrot']
 dynamic_objects = ['Plate'] + ingredients
 Action = ['Put','Take','Chop']
 inf = 1e5
@@ -31,53 +30,348 @@ class event:
     def __str__(self):
         return f'Event(action={self.action}, dynamic_obj={self.dynamic_obj}, static_obj={self.static_obj})'
 
-
 class PretrainedPolicy:
-    def __init__(self, model_path, agent_id, is_self_play=True, batch_size=1, device='cpu'):
+    def __init__(self,args, level=None,num_agents=None, record=False, 
+                max_steps=None, recipes=None, obs_spaces=["dense"],desire=None, obs_range=15,
+                interact_reward=0.5, progress_reward=1.0,
+                complete_reward=10.0, step_cost=0.05,model_path=None,eval_history=True,agent_id=0, device='cuda'):
         # Lazy init. The model is loaded only when the first observation is received, in the environment process
         # This guarantees that no tensor needs to be moved across processes
         self.model_path = model_path
         self.agent_id = agent_id
-        self.actor = self.rnn_states = self.rnn_hidden_dim = None
-        self.is_self_play = is_self_play
-        self.batch_size = batch_size
+        self.num_agents = 2
+        self.num_test_policies = 1
+        self.num_eval_policies = 1
         self.device = device
+        self.eval_history = eval_history
+        self.model_path = model_path
+        self.update_history = True
+        self.args = args
+        print(self.args.has_meta_time_step)
+        print(self.args.include_current_episode)
+        print(self.args.last_episode_only)
+        print(self.args.merge_encoder_computation)
+        print(self.args.pop_oldest_episode)
+        print(self.args.self_obs_mode)
+        self.last_obs = None
+        #self.use_policy_cls_reward = args.policy_cls_reward_coef is not None and inspect_idx is not None
+        #if self.use_policy_cls_reward:
+         #   assert args.policy_cls_reward_coef == 0.0
+        #self.policy_cls_reward_tracker = PolicyClassificationRewardTracker(args, num_eval_policies, num_eval_policies) \
+        #     if use_policy_cls_reward else Nonei
+        self.dump_latents = False
+        self.opp_policies = 1
+        self.policy = self.load(model_path)
+        if self.policy.is_recurrent:
+             self.rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to('cuda')
+        else:
+            self.rnn_states = None   
+        self.masks = torch.zeros(self.num_eval_policies, 1).to(self.device)       
+        if self.args.latent_training:
+            self.history = PeriodicHistoryStorage(
+                num_processes=self.num_test_policies,
+                num_policies=self.num_test_policies,
+                history_storage_size=self.args.history_size,
+                clear_period=self.args.history_size,
+                refresh_interval=1,
+                sample_size=None,
+                has_rew_done=self.args.has_rew_done,
+                max_samples_per_period=None,
+                step_mode=False,
+                use_episodes=True,
+                has_meta_time_step=self.args.has_meta_time_step,
+                include_current_episode=self.args.include_current_episode,
+                obs_shape=(73,),
+                act_shape=tuple(),
+                max_episode_length=40,
+                merge_encoder_computation=self.args.merge_encoder_computation,
+                last_episode_only=self.args.last_episode_only,
+                pop_oldest_episode=self.args.pop_oldest_episode,
+            )   
+            self.history.to('cuda')
+        else:
+            self.history = None
+    def load(self, model_path):
+        # print("model path:", model_path)
+        while os.path.exists(model_path):
+            # print("this is the model path", model_path)
+            device = torch.device('cuda')
+            #torch.serialization.add_safe_globals([LatentPolicy])
+            policy = torch.load(model_path, map_location=device, weights_only=False)
+            return policy
+
 
     def set_id(self, aid):
         self.agent_id = aid
 
-    def __call__(self, obs):
-        if not isinstance(obs, torch.Tensor):
-            obs = torch.from_numpy(obs).float()
-        if self.batch_size == 1:
-            obs = obs.unsqueeze(0)
+    def __call__(self, observation, previous_step):
+
         with torch.no_grad():
-            action, _, self.rnn_states, _ = self.actor.act(obs, self.rnn_states,
-                                                           torch.ones(self.batch_size, 1, device=self.device),
-                                                           None, deterministic=False)
-        return action.item() if self.batch_size == 1 else action.squeeze(-1)
-
+            if self.eval_history is not None:
+                all_agent_indices = torch.arange(1)
+                indices = self.history.get_all_current_indices()
+                history = (self.history, (all_agent_indices,) + indices)
+                #history = None
+                # print(observation.shape)
+                _, action, action_log_prob, rnn_states = self.policy.act(observation, self.rnn_states, self.masks, all_agent_indices, history=history, deterministic=False)
+            self.rnn_states = rnn_states
+            #policy_pred = self.policy.aux_pol_cls_head(self.policy.last_latents) if use_policy_cls_reward else None
+        if str(action.device) == 'cuda':
+            action = action.unsqueeze(-1)
+        # print(previous_step)
+        # if previous_step is not None:
+        #     obs,reward,done,info = previous_step
+        #     self.history.add(0, self.last_obs, info['self_act'] if 'self_act' in info else None, reward[0] if self.history.has_rew_done else None)
+        #     if done:
+        #         if self.args.self_obs_mode:
+        #             print("this is info type", torch.from_numpy(info['terminal_observation']).float())
+        #             self.history.add(0, torch.from_numpy(info['terminal_observation']).float(), None,0.0 if self.history.has_rew_done else None)
+        #         self.history.finish_episode(0)
+        # if previous_step is not None:
+        #     obs,reward,done,infos = previous_step
+        #     # print("we got here")
+        #     for i,info in enumerate(infos):
+        #         if self.update_history:
+        #                 if self.args.self_obs_mode:
+        #                     # print("self observations")
+        #                     if self.args.self_action_mode:
+        #                         # print("i come here")
+        #                         self.history.add(i, self.last_obs, action, reward[0] if self.history.has_rew_done else None)
+        #                     else:
+        #                         # print("i comehere")
+        #                         print("id",i)
+                                
+        #                 elif 'self_obs' in info:
+        #                     # print("opponent observations")
+        #                     eval_history.add(i, info['self_obs'], info['self_act'],
+        #                                     reward[i][0] if eval_history.has_rew_done else None)
+        #                 if done:
+        #                     if self.args.self_obs_mode:
+        #                         print(info['terminal_observation'])
+        #                         self.history.add(i, torch.from_numpy(info['terminal_observation']).float(), None,
+        #                                         0.0 if self.history.has_rew_done else None)
+        #                     self.history.finish_episode(i)
+        self.last_obs = observation
+        # print("action return", action)
+        return action.squeeze(-1).item()
+    def update_opp_history(self, step_data, info):
+        if step_data is not None:
+            # print("update history")
+            reward = step_data.reward
+            done = step_data.done
+            # print("adding", reward[0])
+            # print(self.history.has_rew_done)
+            self.history.add(0, self.last_obs, info['self_act'] if 'self_act' in info else None, reward[0] if self.history.has_rew_done else None)
+            # print("this is done", type(done))
+            if done:
+                if self.args.self_obs_mode:
+                    # print(info['termination_info'])
+                    # this is where the episode ends
+                    self.history.add(0,self.last_obs, None,0.0 if self.history.has_rew_done else None)
+                self.history.finish_episode(0)
     def reset(self):
-        if self.actor is None:
-            # One-time initialization
-            policy = torch.load(self.model_path, map_location=self.device)
-            if self.is_self_play:
-                assert len(policy.actors) == 2, 'Separate-model self-play policy should have exactly 2 actors'
-                self.actor: LatentActor = policy.actors[self.agent_id]
-            else:
-                assert len(policy.actors) == 1, 'Joint policy should have exactly 1 actor'
-                self.actor: LatentActor = policy.actors[0]
-            if policy.is_recurrent:
-                self.rnn_hidden_dim = policy.rnn_hidden_dim
-                self.rnn_states = torch.zeros(self.batch_size, self.rnn_hidden_dim, device=self.device)
-            if not hasattr(self.actor, 'rnn'):
-                self.actor.rnn = None
+        self.policy = self.load(self.model_path)   
+        if self.policy.is_recurrent:
+             self.rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to('cuda')
+        else:
+            self.rnn_states = None   
+        self.masks = torch.zeros(self.num_eval_policies, 1).to('cuda')
+        if self.args.latent_training:
+            self.history = PeriodicHistoryStorage(
+                num_processes=self.num_test_policies,
+                num_policies=self.num_test_policies,
+                history_storage_size=self.args.history_size,
+                clear_period=self.args.history_size,
+                refresh_interval=1,
+                sample_size=None,
+                has_rew_done=self.args.has_rew_done,
+                max_samples_per_period=None,
+                step_mode=False,
+                use_episodes=True,
+                has_meta_time_step=self.args.has_meta_time_step,
+                include_current_episode=self.args.include_current_episode,
+                obs_shape=(73,),
+                act_shape=tuple(),
+                max_episode_length=40,
+                merge_encoder_computation=self.args.merge_encoder_computation,
+                last_episode_only=self.args.last_episode_only,
+                pop_oldest_episode=self.args.pop_oldest_episode,
+            )
+            self.history.to('cuda')
+        else:
+            self.history = None
+class PretrainedPolicy_test:
+    def __init__(self,latent_training, history_size, has_rew_done, has_meta_time_step,  include_current_episode, merge_encoder_computation, last_episode_only, pop_oldest_episode, self_obs_mode, level=None,          num_agents=None, record=False, 
+                max_steps=None, recipes=None, obs_spaces=["dense"],desire=None, obs_range=15,
+                interact_reward=0.5, progress_reward=1.0,
+                complete_reward=10.0, step_cost=0.05,model_path=None,eval_history=True,agent_id=0, device='cuda'):
+        # Lazy init. The model is loaded only when the first observation is received, in the environment process
+        # This guarantees that no tensor needs to be moved across processes
+        self.model_path = model_path
+        self.agent_id = agent_id
+        self.num_agents = 2
+        self.num_test_policies = 1
+        self.num_eval_policies = 1
+        self.device = device
+        self.eval_history = eval_history
+        self.model_path = model_path
+        self.update_history = True
+        self.self_obs_mode = self_obs_mode
+        self.latent_training = latent_training 
+        self.history_size = history_size
+        self.has_rew_done = has_rew_done
+        self.has_meta_time_step = has_meta_time_step 
+        self.include_current_episode = include_current_episode
+        self.merge_encoder_computation = merge_encoder_computation 
+        self.last_episode_only = last_episode_only 
+        self.pop_oldest_episode = pop_oldest_episode
+        self.self_obs_mode = self_obs_mode
+        self.last_obs = None
+        #self.use_policy_cls_reward = args.policy_cls_reward_coef is not None and inspect_idx is not None
+        #if self.use_policy_cls_reward:
+         #   assert args.policy_cls_reward_coef == 0.0
+        #self.policy_cls_reward_tracker = PolicyClassificationRewardTracker(args, num_eval_policies, num_eval_policies) \
+        #     if use_policy_cls_reward else Nonei
+        self.dump_latents = False
+        self.opp_policies = 1
+        self.policy = self.load(model_path)
+        if self.policy.is_recurrent:
+             self.rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to('cuda')
+        else:
+            self.rnn_states = None   
+        self.masks = torch.zeros(self.num_eval_policies, 1).to(self.device)       
+        if self.latent_training:
+            self.history = PeriodicHistoryStorage(
+                num_processes=self.num_test_policies,
+                num_policies=self.num_test_policies,
+                history_storage_size=self.history_size,
+                clear_period=self.history_size,
+                refresh_interval=1,
+                sample_size=None,
+                has_rew_done=self.has_rew_done,
+                max_samples_per_period=None,
+                step_mode=False,
+                use_episodes=True,
+                has_meta_time_step=self.has_meta_time_step,
+                include_current_episode=self.include_current_episode,
+                obs_shape=(73,),
+                act_shape=tuple(),
+                max_episode_length=40,
+                merge_encoder_computation=self.merge_encoder_computation,
+                last_episode_only=self.last_episode_only,
+                pop_oldest_episode=self.pop_oldest_episode,
+            )   
+            self.history.to('cuda')
+        else:
+            self.history = None
+    def load(self, model_path):
+        # print("model path:", model_path)
+        while os.path.exists(model_path):
+            # print("this is the model path", model_path)
+            device = torch.device('cuda')
+            #torch.serialization.add_safe_globals([LatentPolicy])
+            policy = torch.load(model_path, map_location=device, weights_only=False)
+            return policy
 
-        if self.rnn_states is not None:
-            self.rnn_states.zero_()
 
+    def set_id(self, aid):
+        self.agent_id = aid
 
-class RuleBasedPolicy:
+    def __call__(self, observation, previous_step):
+
+        with torch.no_grad():
+            if self.eval_history is not None:
+                all_agent_indices = torch.arange(1)
+                indices = self.history.get_all_current_indices()
+                history = (self.history, (all_agent_indices,) + indices)
+                #history = None
+                # print(observation.shape)
+                _, action, action_log_prob, rnn_states = self.policy.act(observation, self.rnn_states, self.masks, all_agent_indices, history=history, deterministic=False)
+            self.rnn_states = rnn_states
+            #policy_pred = self.policy.aux_pol_cls_head(self.policy.last_latents) if use_policy_cls_reward else None
+        if str(action.device) == 'cuda':
+            action = action.unsqueeze(-1)
+        # print(previous_step)
+        # if previous_step is not None:
+        #     obs,reward,done,info = previous_step
+        #     self.history.add(0, self.last_obs, info['self_act'] if 'self_act' in info else None, reward[0] if self.history.has_rew_done else None)
+        #     if done:
+        #         if self.args.self_obs_mode:
+        #             print("this is info type", torch.from_numpy(info['terminal_observation']).float())
+        #             self.history.add(0, torch.from_numpy(info['terminal_observation']).float(), None,0.0 if self.history.has_rew_done else None)
+        #         self.history.finish_episode(0)
+        # if previous_step is not None:
+        #     obs,reward,done,infos = previous_step
+        #     # print("we got here")
+        #     for i,info in enumerate(infos):
+        #         if self.update_history:
+        #                 if self.args.self_obs_mode:
+        #                     # print("self observations")
+        #                     if self.args.self_action_mode:
+        #                         # print("i come here")
+        #                         self.history.add(i, self.last_obs, action, reward[0] if self.history.has_rew_done else None)
+        #                     else:
+        #                         # print("i comehere")
+        #                         print("id",i)
+                                
+        #                 elif 'self_obs' in info:
+        #                     # print("opponent observations")
+        #                     eval_history.add(i, info['self_obs'], info['self_act'],
+        #                                     reward[i][0] if eval_history.has_rew_done else None)
+        #                 if done:
+        #                     if self.args.self_obs_mode:
+        #                         print(info['terminal_observation'])
+        #                         self.history.add(i, torch.from_numpy(info['terminal_observation']).float(), None,
+        #                                         0.0 if self.history.has_rew_done else None)
+        #                     self.history.finish_episode(i)
+        self.last_obs = observation
+        # print("action return", action)
+        return action.squeeze(-1).item()
+    def update_opp_history(self, step_data, info):
+        if step_data is not None:
+            reward = step_data.reward
+            done = step_data.done
+            self.history.add(0, self.last_obs, info['self_act'] if 'self_act' in info else None, reward[0] if self.history.has_rew_done else None)
+            # print("this is done", type(done))
+            if done:
+                if self.self_obs_mode:
+                    print(info['termination_info'])
+                    self.history.add(0,self.last_obs, None,0.0 if self.history.has_rew_done else None)
+                self.history.finish_episode(0)
+    def reset(self):
+        self.policy = self.load(self.model_path)   
+        if self.policy.is_recurrent:
+             self.rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to('cuda')
+        else:
+            self.rnn_states = None   
+        self.masks = torch.zeros(self.num_eval_policies, 1).to('cuda')
+        if self.latent_training:
+            self.history = PeriodicHistoryStorage(
+                num_processes=self.num_test_policies,
+                num_policies=self.num_test_policies,
+                history_storage_size=self.history_size,
+                clear_period=self.history_size,
+                refresh_interval=1,
+                sample_size=None,
+                has_rew_done=self.has_rew_done,
+                max_samples_per_period=None,
+                step_mode=False,
+                use_episodes=True,
+                has_meta_time_step=self.has_meta_time_step,
+                include_current_episode=self.include_current_episode,
+                obs_shape=(73,),
+                act_shape=tuple(),
+                max_episode_length=40,
+                merge_encoder_computation=self.merge_encoder_computation,
+                last_episode_only=self.last_episode_only,
+                pop_oldest_episode=self.pop_oldest_episode,
+            )
+            self.history.to('cuda')
+        else:
+            self.history = None
+
+        
+class RuleBasedPolicy:    
     def __init__(self, policy_type, nav_p, tar_p, rand_p, convention, env_name, support_set=None,
                  ingredient_support_set=None, event_probs=None):
         self.agent_id = None
@@ -94,6 +388,7 @@ class RuleBasedPolicy:
         self.env_name = env_name
         if "divider" in env_name:
             if "large" in env_name:
+                print("AT RIGHT SPOT")
                 self.divider_loc = [(3,i) for i in range(1,12)]
                 interval = 4
                 upper = 12
@@ -396,8 +691,11 @@ class RuleBasedPolicy:
         return random_action
 
     def get_navigation_action(self, world, agent_loc, target_loc):
+        # print("target location", target_loc[0])
+        # print("agent_loc", agent_loc[0])
         if self.distance(agent_loc,target_loc)>1:
             # still need to move
+            
             action_list = []
             if target_loc[0]>agent_loc[0] and self.is_movable(world,(agent_loc[0]+1,agent_loc[1])):
                 action_list.append(2)
@@ -412,13 +710,27 @@ class RuleBasedPolicy:
             elif len(action_list)>1:
                 action = action_list[0] if np.random.rand()<self.nav_p else action_list[1]
             else:
+                print(action_list)
+                print("target location: x", target_loc[0])
+                print("agent_loc: x", agent_loc[0])
+                print("target location: y", target_loc[1])
+                print("agent_loc: y", agent_loc[1])
+                print(self.is_movable(world,(agent_loc[0]+1,agent_loc[1])))
+                print(self.is_movable(world,(agent_loc[0]-1,agent_loc[1])))
+                print(self.is_movable(world,(agent_loc[0],agent_loc[1]+1)))
+                print(self.is_movable(world,(agent_loc[0],agent_loc[1]-1)))
                 raise NotImplementedError
+            
+            # import sys
+            # sys.exit()
         else:
             # stop and wait
             action = 0
         return action
 
     def get_action_from_event(self, world):
+        # print('selecting the action')
+        # print(self.cur_event.target_location)
         if "divider" in self.env_name:
             agent_loc = world.agents[self.agent_id].location
             agent_orientation = world.agents[self.agent_id].orientation
@@ -438,7 +750,7 @@ class RuleBasedPolicy:
                     action_list.append(4)
                 if len(action_list)==1:
                     action = action_list[0]
-                else:
+        v        else:
                     action = action_list[0] if np.random.rand()<self.nav_p else action_list[1]
                 '''
             else:
@@ -483,8 +795,13 @@ class RuleBasedPolicy:
             if new_event is None:
                 # No available event, navigate to the plate and wait for food service
                 self_loc = world.agents[self.agent_id].location
-                deliver_loc = world.world_objects['DeliverSquare'][0].location
-                action = self.get_navigation_action(world, self_loc, deliver_loc)
+                # plate location is (4,2)
+                # deliver_loc = world.world_objects['Plate'][0].location
+                # print("these are all the plates in the world:", world.world_objects["Plate"])
+                # print("this is the plate location:", deliver_loc)
+                deliver_location = [3,2]
+                # print("this is the location next to the plate on the left:", deliver_location[0])
+                action = self.get_navigation_action(world, self_loc, deliver_location)
             else:
                 self.cur_event = new_event 
                 action = self.get_action_from_event(world)
@@ -497,7 +814,7 @@ class RuleBasedPolicy:
                 self.cur_event = event("Chop", self.cur_event.dynamic_obj)
             elif self.cur_event.action == "Chop":
                 self.cur_event = event("Take", self.cur_event.dynamic_obj)
-            # elif self.cur_event.action == "Take" and self.cur_event.dynamic_obj != "Plate":
+            # elif self.cur_event.action == "Take" and self.cur_event.dynamic_obj != "Plate":s
             #     take_obj = world.get_objects_at(self.cur_event.target_location, DynamicObject)
             #     if len(take_obj) == 1 and not take_obj[0].done():
             #         self.cur_event = event("Put", self.cur_event.dynamic_obj, "CutBoard")
@@ -526,8 +843,143 @@ class RuleBasedPolicy:
         #     selected_event = np.random.choice(self.support_set, p=self.event_probs)
         # return self.get_action_from_event(selected_event)
 
-
+from pathlib import Path
+def get_train_eval_cross_seed_pool(args):
+    # pick all the latest agents from logs
+    train_pool = []
+    eval_pool = []
+    location = "/home/asurite.ad.asu.edu/ubiswas2/PACE/logs/Overcooked/cross_seed_eval/"
+    # this arg needs to be changed. Doing it manually for now.
+    latent_training = True
+    history_size = 5
+    has_rew_done = False
+    has_meta_time_step = False
+    include_current_episode = True
+    last_episode_only = False
+    merge_encoder_computation = True
+    pop_oldest_episode = False
+    self_obs_mode = True
+    for root, dirs,files in os.walk(location):
+        for file in files:
+            if file == "latest.pt":
+                file_path = os.path.join(root,file)
+                policy = PretrainedPolicy_test(latent_training=latent_training, history_size=history_size, has_rew_done=has_rew_done, has_meta_time_step=has_meta_time_step, include_current_episode=include_current_episode, merge_encoder_computation=merge_encoder_computation, last_episode_only=last_episode_only,pop_oldest_episode=pop_oldest_episode,self_obs_mode=self_obs_mode,model_path=file_path, eval_history=False)
+                eval_pool.append(policy)
+    
+    for root, dirs,files in os.walk(location):
+        for file in files:           
+            if file == "25008000.pt":
+                file_path = os.path.join(root,file)
+                policy = PretrainedPolicy_test(latent_training=latent_training, history_size=history_size, has_rew_done=has_rew_done, has_meta_time_step=has_meta_time_step, include_current_episode=include_current_episode, merge_encoder_computation=merge_encoder_computation, last_episode_only=last_episode_only,pop_oldest_episode=pop_oldest_episode,self_obs_mode=self_obs_mode,model_path=file_path, eval_history=False)
+                eval_pool.append(policy)
+    # for root, dirs,files in os.walk(location):
+    #     for file in files:           
+    #         if file == "10008000.pt":
+    #             file_path = os.path.join(root,file)
+    #             policy = PretrainedPolicy_test(latent_training=latent_training, history_size=history_size, has_rew_done=has_rew_done, has_meta_time_step=has_meta_time_step, include_current_episode=include_current_episode, merge_encoder_computation=merge_encoder_computation, last_episode_only=last_episode_only,pop_oldest_episode=pop_oldest_episode,self_obs_mode=self_obs_mode,model_path=file_path, eval_history=False)
+    #             eval_pool.append(policy)
+    # for root, dirs,files in os.walk(location):
+    #     for file in files:           
+    #         if file == "15000000.pt":
+    #             file_path = os.path.join(root,file)
+    #             policy = PretrainedPolicy_test(latent_training=latent_training, history_size=history_size, has_rew_done=has_rew_done, has_meta_time_step=has_meta_time_step, include_current_episode=include_current_episode, merge_encoder_computation=merge_encoder_computation, last_episode_only=last_episode_only,pop_oldest_episode=pop_oldest_episode,self_obs_mode=self_obs_mode,model_path=file_path, eval_history=False)
+    #             eval_pool.append(policy)
+    # for root, dirs,files in os.walk(location):
+    #     for file in files:           
+    #         if file == "20004000.pt":
+    #             file_path = os.path.join(root,file)
+    #             policy = PretrainedPolicy_test(latent_training=latent_training, history_size=history_size, has_rew_done=has_rew_done, has_meta_time_step=has_meta_time_step, include_current_episode=include_current_episode, merge_encoder_computation=merge_encoder_computation, last_episode_only=last_episode_only,pop_oldest_episode=pop_oldest_episode,self_obs_mode=self_obs_mode,model_path=file_path, eval_history=False)
+    #             eval_pool.append(policy)
+    # for root, dirs,files in os.walk(location):
+    #     for file in files:           
+    #         if file == "5004000.pt":
+    #             file_path = os.path.join(root,file)
+    #             policy = PretrainedPolicy_test(latent_training=latent_training, history_size=history_size, has_rew_done=has_rew_done, has_meta_time_step=has_meta_time_step, include_current_episode=include_current_episode, merge_encoder_computation=merge_encoder_computation, last_episode_only=last_episode_only,pop_oldest_episode=pop_oldest_episode,self_obs_mode=self_obs_mode,model_path=file_path, eval_history=False)
+    #             eval_pool.append(policy)
+    # for root, dirs,files in os.walk(location):
+    #     for file in files:           
+    #         if file == "5004000.pt":
+    #             file_path = os.path.join(root,file)
+    #             policy = PretrainedPolicy_test(latent_training=latent_training, history_size=history_size, has_rew_done=has_rew_done, has_meta_time_step=has_meta_time_step, include_current_episode=include_current_episode, merge_encoder_computation=merge_encoder_computation, last_episode_only=last_episode_only,pop_oldest_episode=pop_oldest_episode,self_obs_mode=self_obs_mode,model_path=file_path, eval_history=False)
+    #             eval_pool.append(policy)
+    # eval_pool = eval_pool[0:2]
+    # eval_pool = eval_pool[0:2]
+    return train_pool, eval_pool
+def get_train_eval_level_1_pool(args):
+    # pick all the latest agents from logs
+    train_pool = []
+    eval_pool = []
+    location = "/home/asurite.ad.asu.edu/ubiswas2/PACE/logs/Overcooked/level_1/"
+    for root, dirs,files in os.walk(location):
+        for file in files:
+            if file == "latest.pt":
+                file_path = os.path.join(root,file)
+                policy = PretrainedPolicy(args,model_path=file_path, eval_history=False)
+                eval_pool.append(policy)
+    
+    for root, dirs,files in os.walk(location):
+        for file in files:           
+            if file == "25008000.pt":
+                file_path = os.path.join(root,file)
+                policy = PretrainedPolicy(args,model_path=file_path, eval_history=False)
+                eval_pool.append(policy)
+    # eval_pool = eval_pool[0:2]
+    return train_pool, eval_pool
 def get_train_eval_pool(args):
+    assert args.env_name == 'Overcooked'
+    left_ingred = ingredients[:3]
+    right_ingred = ingredients[3:]
+    ingredient_sets_all = []
+    policy_pool_train = []
+    policy_pool_eval = []
+    with open(args.env_config, 'r') as env_config_file:
+        env_map = yaml.safe_load(env_config_file)['mode']
+        print('Using map', env_map, 'and recipe type', args.recipe_type)
+    # print(left_ingred[3])
+    i=0
+    while i<len(left_ingred):
+        print(i)
+        # print(left_ingred[i], right_ingred[i])
+        ingredient_sets_all.append([left_ingred[i], right_ingred[i]])
+        i = i + 1
+    print(ingredient_sets_all)
+    # Use all three recipe combinations for both training and evaluation
+    ingredient_set_train = ingredient_sets_all  # [Lettuce+Onion, Tomato+Carrot, Potato+Broccoli]
+    ingredient_set_eval = ingredient_sets_all   # [Lettuce+Onion, Tomato+Carrot, Potato+Broccoli]
+    print(ingredient_set_train)
+    print(ingredient_set_eval)
+    i = 0
+    j = 0
+    args.p = 0
+    while i < args.train_pool_size:
+        for recipe in ingredient_set_train:
+            policy = RuleBasedPolicy('full',0, 0, 0, None,
+                                     env_map, ingredient_support_set=recipe)
+            policy_pool_train.append(policy)
+            i = i + 1
+    # Use eval_pool_size from command-line arguments
+    while j < args.eval_pool_size:
+        for recipe in ingredient_set_eval:
+            policy = RuleBasedPolicy('full',0, 0, 0, None,
+                                     env_map, ingredient_support_set=recipe)
+            policy_pool_eval.append(policy)
+            j = j + 1
+    print('Put', len(policy_pool_train), 'rule-based opponents into train pool, ingredient support sets:',
+              [p.ingredient_support_set for p in policy_pool_train])
+    print('Put', len(policy_pool_eval), 'rule-based opponents into eval pool, ingredient support sets:',
+              [p.ingredient_support_set for p in policy_pool_eval])
+    self_play_opponents = args.train_pool_size - args.rule_based_opponents
+    if self_play_opponents > 0:
+        assert 'potato_hard' in args.env_config, f'Loading potato hard fcp checkpoints for map {args.env_config}'
+        self_play_pool = load_potato_hard_self_play_policy_pool(1 - args.player_id)
+        assert len(self_play_pool) >= self_play_opponents, \
+            f'Requesting {self_play_opponents} self-play opponents, got {len(self_play_pool)}'
+        policy_pool_train.extend(self_play_pool[:self_play_opponents])
+        print('Put', self_play_opponents, 'self-play opponents into train pool, model paths:',
+              [p.model_path for p in self_play_pool[:self_play_opponents]])
+    return policy_pool_train, policy_pool_eval
+
+def get_train_eval_base_pool(args):
     assert args.env_name == 'Overcooked'
     if args.desire_id is not None:
         assert args.desire_id < 2 ** 5, f'Desire id out of range: {args.desire_id}'
@@ -567,7 +1019,6 @@ def get_train_eval_pool(args):
 def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, pool_seed=1):
     old_state = np.random.get_state()
     np.random.seed(pool_seed)
-
     left_ingred = ingredients[:3]
     right_ingred = ingredients[3:]
     ingredient_sets_all = []
@@ -575,21 +1026,28 @@ def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, po
     #     if i > (i & -i):
     #         ingredient_sets_all.append([ingredients[j] for j in range(len(ingredients)) if (i >> j) & 1])
 
-    if recipe_type == 'full':
-        # one ingredient in left
-        for ingred in left_ingred:
-            ingredient_sets_all.append([ingred])
-        # two ingredient in left
-        for i in range(len(left_ingred)):
-            for j in range(i+1, len(left_ingred)):
-                ingredient_sets_all.append([left_ingred[i], left_ingred[j]])
-    else:
-        assert recipe_type == 'cross', f'Unknown recipe type {recipe_type}'
+    # if recipe_type == 'full':
+    #     # one ingredient in left
+    #     for ingred in left_ingred:
+    #         ingredient_sets_all.append([ingred])
+    #     # two ingredient in left
+    #     for i in range(len(left_ingred)):
+    #         for j in range(i+1, len(left_ingred)):
+    #             ingredient_sets_all.append([left_ingred[i], left_ingred[j]])
+    # else:
+    #     assert recipe_type == 'cross', f'Unknown recipe type {recipe_type}'
 
-    # one ingredient in left, one in right
-    for ingred in left_ingred:
-        for ingred2 in right_ingred:
-            ingredient_sets_all.append([ingred, ingred2])
+    # # one ingredient in left, one in right
+    # for ingred in left_ingred:
+    #     for ingred2 in right_ingred:
+    #         ingredient_sets_all.append([ingred, ingred2])
+    i=0
+    while i<len(left_ingred):
+        print(i)
+        # print(left_ingred[i], right_ingred[i])
+        ingredient_sets_all.append([left_ingred[i], right_ingred[i]])
+        i = i + 1
+    print(ingredient_sets_all)
     print('All ingredient support sets:', ingredient_sets_all)
     print('Corresponding indices:', [sum(1 << Ingred2ID[ingred] for ingred in ingred_set) for ingred_set in ingredient_sets_all])
     pool = []
@@ -605,61 +1063,9 @@ def generate_policy_pool(gen_desire, p_max, env_name, pool_size, recipe_type, po
         else:
             # policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, np.random.rand() * p_max, 0.05, None,
             #                          env_name, ingredient_support_set=ingredient_support_set)
-            policy = RuleBasedPolicy('minimum', np.random.rand() * p_max, 0, 0.1 * np.random.rand(), None,
+            policy = RuleBasedPolicy('full', 0, 0, 0, None,
                                      env_name, ingredient_support_set=ingredient_support_set)
         pool.append(policy)
 
     np.random.set_state(old_state)
     return pool
-
-
-def load_good_self_play_policy_pool(player_id):
-    print('Loading pretrained good self-play opponents...')
-    good_policies = []
-    good_policies2 = []
-    for i in range(1, 16):
-        run_path = './data/Overcooked/fcp_checkpoints/'
-        good_policies.append(PretrainedPolicy(os.path.join(run_path, f'{i}_final.pt'), player_id))
-        good_policies2.append(PretrainedPolicy(os.path.join(run_path, f'{i}_run2_final.pt'), player_id))
-    print(f'{len(good_policies + good_policies2)} policies loaded.')
-    # Fix partition across runs
-    old_state = random.getstate()
-    random.seed(1)
-    random.shuffle(good_policies)
-    random.shuffle(good_policies2)
-    random.setstate(old_state)
-    return good_policies + good_policies2[:10], good_policies2[10:]
-
-
-def load_potato_self_play_policy_pool(player_id):
-    print('Loading pretrained good self-play opponents on the potato map...')
-    good_policies = []
-    for i in range(12):
-        run_path = './data/Overcooked/fcp_checkpoints/'
-        good_policies.append(PretrainedPolicy(os.path.join(run_path, f'rule_potato_{i}_final.pt'), player_id))
-    print(f'{len(good_policies)} policies loaded.')
-    # Fix partition across runs
-    old_state = random.getstate()
-    random.seed(1)
-    random.shuffle(good_policies)
-    random.setstate(old_state)
-    return good_policies
-
-
-def load_potato_hard_self_play_policy_pool(player_id):
-    print('Loading pretrained good self-play opponents on the potato hard map...')
-    good_policies = []
-    for i in range(12):
-        run_path = './data/Overcooked/fcp_checkpoints/'
-        good_policies.append(PretrainedPolicy(os.path.join(run_path, f'rule_potato_{i}_final.pt'), player_id))
-    print(f'{len(good_policies)} policies loaded.')
-    # Fix partition across runs
-    old_state = random.getstate()
-    random.seed(1)
-    random.shuffle(good_policies)
-    random.setstate(old_state)
-    return good_policies
-
-
-# TODO: pick a test policy pool
-test_policies = None

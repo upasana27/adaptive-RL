@@ -42,7 +42,6 @@ class Policy(nn.Module):
             else:
                 raise NotImplementedError
 
-        self.base = base(obs_shape[0], **base_kwargs)
 
         if action_space.__class__.__name__ == "Discrete":
             num_outputs = action_space.n
@@ -142,6 +141,7 @@ class MLP(nn.Module):
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x):
+        # print("this is the eror", x.dtype)
         return self.mlp(x)
 
 
@@ -508,6 +508,18 @@ class Encoder(nn.Module):
         # history: (obs, act, ep_mask, sp_mask)
         # Return reparameterized sample and distribution parameter
 
+        # Handle empty/None history (for testing default policy behavior)
+        if history is None:
+            batch_size = len(agent_indices) if hasattr(agent_indices, '__len__') else 1
+            # Infer device from model parameters
+            device = next(self.parameters()).device
+            zero_latents = torch.zeros(batch_size, self.latent_dim, device=device)
+            if self.deterministic_latent:
+                return zero_latents, None
+            else:
+                zero_std = torch.zeros_like(zero_latents)
+                return zero_latents, zero_std
+
         if self.identity_encoder:
             # Force encoder to be identity (return policy index directly)
             # NOTE: this only works on CUDA
@@ -522,6 +534,7 @@ class Encoder(nn.Module):
         else:
             storage, (proc_idx, period_idx, episode_idx, length_idx) = history
             storage: PeriodicHistoryStorage
+            # print(proc_idx)
             batch_size = len(proc_idx)
             if storage.merge_encoder_computation:
                 # Reuse computation for the same period
@@ -538,7 +551,8 @@ class Encoder(nn.Module):
                 ep_mask = None
             else:
                 obs, act, ep_mask, sp_mask = storage.get_by_idx(proc_idx, period_idx, episode_idx, length_idx)
-
+            # print("this is observation", obs.shape,'\n')
+            # print("this is action", act.shape, '\n')
             history = self.convert_inputs(obs, act)
 
             if storage.merge_encoder_computation:
@@ -749,12 +763,18 @@ class LatentActor(nn.Module):
         else:
             if self.cnn is not None:
                 inputs = self.cnn(inputs)
-
+            # print(latents)
             if latents is not None:
+                # print("going to latent")
+                # print("input shape", inputs.shape)
+                # print("latents shape", latents.shape)
                 inputs = torch.cat([inputs, latents], dim=-1)
-
+        
+            import sys
+            # print(inputs.shape)
+            # sys.exit()
             features = self.base(inputs)
-
+            
             if self.rnn is not None:
                 features, rnn_hxs = self.rnn(features, rnn_hxs, masks)
 
@@ -880,10 +900,8 @@ class LatentPolicy(nn.Module):
             self.actors = None
 
         # Auxiliary tasks
-        if use_aux_pol_cls:
-            self.aux_pol_cls_head = nn.Linear(self.encoder.latent_dim, indices_mapper.args.policy_id_max.sum().item())
-        else:
-            self.aux_pol_cls_head = None
+        # Auxiliary policy classifier removed
+        self.aux_pol_cls_head = None
 
         if use_aux_value_pred:
             self.aux_val_pred_head = Critic(algo, value_obj, dueling, obs_shape, self.encoder.latent_dim, action_space.n,

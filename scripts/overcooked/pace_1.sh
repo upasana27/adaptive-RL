@@ -16,8 +16,6 @@ python train_.py --env-name Overcooked \
   --hidden-dims 128 128 --act-func relu \
   --train-pool-size 3 --eval-pool-size 3 \
   --rule-based-opponents 3 \
-  --policy-cls-reward-coef 0.2 --policy-cls-reward-type accuracy --policy-cls-reward-mode max_full --policy-cls-warmup-steps 1000000 \
-  --policy-cls-reward-decay-steps 25000000 \
   --history-middle-sampling \
   --merge-encoder-computation \
   --history-full-size 5 \

@@ -33,7 +33,7 @@ def train_embedding(args, train_pool, eval_pool):
     assert len(train_pool) == args.train_pool_size
     num_train_opponents = len(train_pool)
     device = 'cuda' if args.cuda else 'cpu'
-
+    # print("this is the device", device)
     # Prepare environments
     # Make (at least one) training environment for every opponent in the pool
     if num_train_opponents > args.num_processes:
@@ -59,6 +59,9 @@ def train_embedding(args, train_pool, eval_pool):
     envs = make_vec_envs(args, args.env_name, args.seed, args.num_processes, args.log_dir, device, True,
                          always_use_dummy=args.use_dummy_vec_env)
     max_episode_length = envs.env_method('episode_length', indices=0)[0]
+    # print(envs.observation_space.shape)
+    # import sys
+    # sys.exit()
     if args.multi_agent == 1:
         for i in range(args.num_processes):
             # This performs a deepcopy, so every environment receives an exclusive copy
@@ -485,6 +488,7 @@ def train_embedding(args, train_pool, eval_pool):
                 # Sample actions
                 with torch.no_grad():
                     if phase == 0:
+                        # print("training act")
                         value, action, action_log_prob, rnn_states = policy.act(
                             rollouts.current_obs(), rollouts.current_rnn_states(), rollouts.current_masks(),
                             all_agent_indices, None
@@ -494,15 +498,14 @@ def train_embedding(args, train_pool, eval_pool):
                         indices = rollouts.history.get_all_current_indices()
                         all_period_idx, all_episode_idx, all_length_idx = indices
                         history = (rollouts.history, (all_agent_indices,) + indices)
+                        # print("training act")
                         value, action, action_log_prob, rnn_states = policy.act(
                             rollouts.current_obs(), rollouts.current_rnn_states(), rollouts.current_masks(),
                             all_agent_indices, history, query_ind=args.collect_all
                         )
 
-                        if use_policy_cls_reward:
-                            policy_pred = policy.aux_pol_cls_head(policy.last_latents)
-                        else:
-                            policy_pred = None
+                        # Auxiliary policy classifier removed
+                        policy_pred = None
 
                         if use_soft_imitation:
                             # Act with the best responses and compute importance sampling weights
@@ -518,6 +521,7 @@ def train_embedding(args, train_pool, eval_pool):
                                     br_obs_ = br_obs
                                 br_masks = rollouts.current_masks()[br_proc_ids]
                                 # Act with the best responses, get the BR actions and mu
+                                # print("training act")
                                 _, br_action, br_action_log_prob, _ = policy.act(
                                     br_obs_, None, br_masks, br_proc_ids, None, query_ind=True
                                 )
@@ -703,10 +707,13 @@ def train_embedding(args, train_pool, eval_pool):
 
         if args.eval_interval is not None \
                 and last_num_steps // args.eval_interval != total_num_steps // args.eval_interval:
+            # import sys
+            # print(args)
+            # sys.exit()
             evaluate(args, eval_pool, args.eval_episodes, eval_envs, eval_history, policy,
                      j + phase * num_updates if args.wandb_user_name is not None else None,
                      use_latent=phase, update_history=True)
-
+            
         end = time.time()
         fps = args.num_steps * args.num_processes / (end - start)
         if episode_result_ready:
@@ -845,6 +852,8 @@ if __name__ == '__main__':
             from environment.kuhn_poker.policy_new import get_train_eval_pool
     elif arg.env_name == 'MPE':
         from environment.mpe.policy_both import get_train_eval_pool
+    elif arg.env_name == 'IPD':
+        from environment.ipd.policy import get_train_eval_pool
     else:
         raise NotImplementedError
     train_policies, eval_policies = get_train_eval_pool(arg)
@@ -886,3 +895,4 @@ if __name__ == '__main__':
     # arg.train_pool_size, arg.eval_pool_size = arg.eval_pool_size, arg.train_pool_size
 
     train_embedding(arg, train_policies, eval_policies)
+

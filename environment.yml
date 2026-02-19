@@ -1,42 +1,24 @@
 name: pace
 channels:
-  - pytorch
   - conda-forge
   - defaults
 dependencies:
   - python=3.8
   - pip
-  
-  # PyTorch (CPU version for lighter deployment, change to cuda if GPU available)
-  - pytorch=1.12.1
-  - torchvision=0.13.1
-  - cpuonly
-  
-  # Core scientific computing
-  - numpy=1.24.3
-  - scipy
-  
-  # Image processing
-  - pillow=10.0.0
-  - opencv
-  
-  # Game rendering
-  - pygame=2.1.0
-  
-  # Web framework
-  - flask=2.3.0
-  - flask-cors
-  
-  # Other utilities
+  - numpy
+  - pillow
   - pyyaml
-  - tqdm
-  
-  # Pip packages
   - pip:
+    - torch==1.12.1
+    - torchvision==0.13.1
+    - flask==2.3.0
     - flask-socketio==5.3.4
     - python-socketio==5.9.0
     - eventlet==0.33.3
-    - greenlet==2.0.2
+    - pygame==2.1.0
+    - scipy
+    - opencv-python
+    - tqdm
     - wandb
     - gym==0.21.0
     - pettingzoo==1.22.0

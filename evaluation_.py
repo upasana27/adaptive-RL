@@ -14,10 +14,13 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
     dump_latents = hasattr(args, 'dump_latents') and args.dump_latents
 
     if eval_history is not None:
-        assert args.history_use_episodes and (eval_episodes == eval_history.clear_period or args.pop_oldest_episode or args.reward_drop_ratio is not None)
+        # print(args.history_use_episodes)
+        # print(eval_history.clear_period)
+        # print(args.pop_oldest_episode)
+        assert args.history_use_episodes and (eval_episodes == eval_history.clear_period or args.pop_oldest_episode or getattr(args, 'reward_drop_ratio', None) is not None)
     num_eval_policies = len(eval_policies)
     assert num_eval_policies == eval_envs.num_envs
-
+    recipe_pref_over_episodes = []
     eval_envs.env_method('full_reset')
     last_obs = obs = eval_envs.reset()
     update_history = update_history and eval_history is not None
@@ -39,12 +42,16 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
     }
 
     use_policy_cls_reward = args.policy_cls_reward_coef is not None and inspect_idx is not None
+    print("value of use_policy", use_policy_cls_reward)
+    # import sys 
+    # sys.exit()
     if use_policy_cls_reward:
         assert args.policy_cls_reward_coef == 0.0
     policy_cls_reward_tracker = PolicyClassificationRewardTracker(args, num_eval_policies, num_eval_policies) \
         if use_policy_cls_reward else None
-    first_inspect = True
-
+    first_inspect = False
+    recipe_pref_by_opponent = [[] for _ in range(num_eval_policies)]
+    episodes = [0 for _ in range(num_eval_policies)]
     while min(len(eval_stats_by_opponent['reward'][i]) for i in range(num_eval_policies)) < eval_episodes:
         if inspect_idx is not None:
             render_kwargs = {
@@ -70,8 +77,12 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
         # Sample actions
         with torch.no_grad():
             if eval_history is not None:
-                indices = eval_history.get_all_current_indices()
-                history = (eval_history, (all_agent_indices,) + indices)
+                # Option to test with empty history (forces zero latent / default policy)
+                if hasattr(args, 'test_empty_history') and args.test_empty_history:
+                    history = None
+                else:
+                    indices = eval_history.get_all_current_indices()
+                    history = (eval_history, (all_agent_indices,) + indices)
             else:
                 history = None
             _, action, action_log_prob, rnn_states = policy.act(
@@ -97,7 +108,6 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
             prev_agent_perm_all = None
 
         obs, reward, done, infos = eval_envs.step(action.squeeze(-1))
-
         if use_policy_cls_reward:
             policy_cls_reward_tracker.advance(reward, infos, policy_pred, prev_agent_perm_all, inspect_idx)
             input(f'Actual reward {reward[inspect_idx]}, policy classification reward {infos[inspect_idx]["expl_reward"]}')
@@ -118,7 +128,16 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                             )
                 if args.env_name == 'KuhnPoker':
                     eval_stats_by_opponent['showdown'][i].append(info['showdown'])
-
+            if done[i]:
+                    # print("for baseline tested against opponent", i)
+                    
+                    episodes[i] += 1
+                    # print("number of episodes played and saved", episodes[i])
+                    # import copy
+                    
+                    # recipe_pref_this_episode = eval_envs.env_method("get_recipe_pref_all_ep", indices=[i])
+                    # a = copy.deepcopy(recipe_pref_this_episode)
+                    # recipe_pref_by_opponent[i].append(a)
             if update_history:
                 if args.self_obs_mode:
                     if args.self_action_mode:
@@ -129,12 +148,17 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                 elif 'opponent_obs' in info:
                     eval_history.add(i, info['opponent_obs'], info['opponent_act'],
                                      reward[i][0] if eval_history.has_rew_done else None)
+                # print("I am here", done[i], info['termination_info'])
                 if done[i]:
+                    # print("for baseline tested against opponent", i)
                     if args.self_obs_mode:
+                        print("for policy number:", i)
                         eval_history.add(i, torch.from_numpy(info['terminal_observation']).float(), None,
                                          0.0 if eval_history.has_rew_done else None)
+                        print("I am here", info['termination_info'])
                     eval_history.finish_episode(i)
-        if (args.opponent_switch_period_min is not None or args.opponent_switch_schedule is not None) and update_history:
+
+        if (getattr(args, 'opponent_switch_period_min', None) is not None or getattr(args, 'opponent_switch_schedule', None) is not None) and update_history:
             for i, info in enumerate(infos):
                 if 'episode' in info.keys():
                     # Reward decreases significantly, clear context
@@ -143,15 +167,15 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                     num_full_episodes = eval_history.current_episode[i]
                     reward_max = max(eval_stats_by_opponent[metric][i][-num_full_episodes:])
                     reward_min = min(eval_stats_by_opponent[metric][i][-num_full_episodes:])
-                    reward_threshold = reward_max * args.reward_drop_ratio + reward_min * (1.0 - args.reward_drop_ratio)
+                    # reward_threshold = reward_max * args.reward_drop_ratio + reward_min * (1.0 - args.reward_drop_ratio)
                     # input()
-                    if num_full_episodes > 1 and eval_stats_by_opponent[metric][i][-1] < reward_threshold:
+                    # if num_full_episodes > 1 and eval_stats_by_opponent[metric][i][-1] < reward_threshold:
                         # print(
                         #     f'Clearing history for opponent {i} due to reward drop, current total num episodes: {len(eval_stats_by_opponent[metric][i])}, current completed episodes before last clearning {num_full_episodes}'
                         # )
                         # print(f'Process {i} episode {len(eval_stats_by_opponent[metric][i])} {metric}: {eval_stats_by_opponent[metric][i]}, threshold: {reward_threshold}, max: {reward_max}, min: {reward_min}')
                         # input()
-                        eval_history.clear_to_one_episode(i)
+                        # eval_history.clear_to_one_episode(i)
 
         last_obs = obs
 
@@ -160,7 +184,7 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                                        for i, done_ in enumerate(done)]).to(obs.device)
         else:
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done]).to(obs.device)
-
+        
     # Mean over episodes, no action over opponents
     mean_eval_stats_by_opponent = {
         k: None if min(len(eval_stats_by_opponent[k][i]) for i in range(num_eval_policies)) < eval_episodes
@@ -212,13 +236,18 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
     if log_steps is not None:
         log_group = 'eval' if use_latent else 'eval_ind'
         wandb.log({f'{log_group}/{k}': v for k, v in eval_info.items()}, step=log_steps)
-
+    print("number of policies", num_eval_policies)
+    print("numbe of episodes", eval_episodes)
     print(" Evaluation using {} episodes: {}\n".format(num_eval_policies * eval_episodes,
                                                        {k: v for k, v in eval_info.items() if 'cumul' not in k and 'cur' not in k and k != 'latents'}))
+    print("for baselines",episodes)
+    
     if args.env_name == 'Overcooked':
         print('All success rates, by opponent policy:', mean_eval_stats_by_opponent['success_rate'])
+    # print(len(recipe_pref_by_opponent[0][1]))
+    # print(recipe_pref_by_opponent[0][1])
 
     if update_history:
         eval_history.trim()
 
-    return eval_info
+    return eval_info, recipe_pref_by_opponent

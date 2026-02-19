@@ -31,7 +31,7 @@ GraphicsProperties = namedtuple("GraphicsProperties", ["pixel_per_tile", "holdin
 
 class GraphicPipeline:
 
-    PIXEL_PER_TILE = 100
+    PIXEL_PER_TILE = 90
     HOLDING_SCALE = 0.5
     CONTAINER_SCALE = 0.7
 

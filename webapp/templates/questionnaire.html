@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Participant Information</title>
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+    
+    <style>
+      body {
+        font-size: 16px;
+        line-height: 1.7;
+        background-color: #f8f9fa;
+        padding: 20px 0;
+      }
+      .container-main {
+        max-width: 700px;
+        background-color: white;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin: 20px auto;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        font-weight: bold;
+        color: #2c3e50;
+        font-size: 28px;
+      }
+      .subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+        font-style: italic;
+      }
+      .form-section {
+        margin-bottom: 30px;
+      }
+      h2 {
+        font-size: 18px;
+        font-weight: bold;
+        color: #34495e;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+      }
+      .form-group {
+        margin-bottom: 25px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+      }
+      input[type="number"],
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        box-sizing: border-box;
+      }
+      input[type="number"]:focus,
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+      }
+      .radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .radio-option {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .radio-option:hover {
+        background-color: #f8f9fa;
+      }
+      .radio-option input[type="radio"] {
+        margin-right: 12px;
+        cursor: pointer;
+        width: auto;
+        min-width: 20px;
+      }
+      .radio-option label {
+        margin-bottom: 0;
+        font-weight: normal;
+        cursor: pointer;
+        flex-grow: 1;
+      }
+      .button-container {
+        text-align: center;
+        margin-top: 35px;
+        padding-top: 20px;
+        border-top: 2px solid #e9ecef;
+      }
+      .btn-next {
+        padding: 12px 50px;
+        font-size: 18px;
+        font-weight: bold;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .btn-next:hover {
+        background-color: #0056b3;
+      }
+      .btn-next:active {
+        transform: scale(0.98);
+      }
+      .required {
+        color: #dc3545;
+      }
+      @media (max-width: 768px) {
+        .container-main {
+          padding: 20px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+      }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+      <h1>Participant Information</h1>
+      <p class="subtitle">Please provide some information about yourself before we begin.</p>
+
+      <form action="/questionnaire" method="POST">
+        <!-- Alias Section -->
+        <div class="form-section">
+          <div class="form-group">
+            <label for="alias">Nickname/Alias <span class="required">*</span></label>
+            <input type="text" id="alias" name="alias" required placeholder="Enter your nickname" value="{{ alias }}" readonly>
+            <small style="color: #999; display: block; margin-top: 5px;">This is the alias you provided at the start</small>
+          </div>
+        </div>
+
+        <!-- Age Section -->
+        <div class="form-section">
+          <div class="form-group">
+            <label for="age">Age <span class="required">*</span></label>
+            <input type="number" id="age" name="age" required placeholder="Enter your age" min="18" max="120">
+          </div>
+        </div>
+
+        <!-- Education Section -->
+        <div class="form-section">
+          <label>Highest Educational Qualification <span class="required">*</span></label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="highschool" name="education" value="High School" required>
+              <label for="highschool">High School Diploma or Equivalent</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="bachelor" name="education" value="Bachelor's Degree" required>
+              <label for="bachelor">Bachelor's Degree</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="master" name="education" value="Master's Degree" required>
+              <label for="master">Master's Degree</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="doctoral" name="education" value="Doctoral Degree" required>
+              <label for="doctoral">Doctoral Degree (Ph.D., M.D., etc.)</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="button-container">
+          <button type="submit" class="btn-next">Continue to Instructions</button>
+        </div>
+      </form>
+    </div>
+
+    <script src="../static/lib/jquery-min.js"></script>
+    <script src="../static/js/bootstrap.min.js"></script>
+  </body>
+</html>

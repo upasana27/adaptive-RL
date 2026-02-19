@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workload Assessment - Overcooked Study</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+        }
+        .container {
+            max-width: 700px;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .intro-text {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .tlx-question {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .tlx-question h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 16px;
+        }
+        .tlx-question p {
+            margin: 0 0 15px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .button-scale {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .scale-btn {
+            width: 45px;
+            height: 45px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .scale-btn:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        .scale-btn.selected {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .submit-btn {
+            display: block;
+            margin: 30px auto 0;
+            padding: 12px 40px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .submit-btn:hover {
+            background: #0056b3;
+        }
+    </style>
+    <script>
+        function selectScale(inputName, value) {
+            // Set hidden input
+            document.getElementById(inputName).value = value;
+            // Update button styling
+            const buttons = document.querySelectorAll(`button[data-input="${inputName}"]`);
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Assessment</h1>
+        <div class="intro-text">Please rate your experience on the following dimensions:</div>
+        
+        <form action="/submit_nasa_tlx" method="POST">
+            <div class="tlx-question">
+                <h3>Mental Demand</h3>
+                <p>How mentally demanding was the task?</p>
+                <input type="hidden" name="mental_demand" id="mental_demand" value="4" required>
+                <div class="button-scale">
+                    <button type="button" class="scale-btn" data-input="mental_demand" onclick="selectScale('mental_demand', '1'); event.preventDefault();">1</button>
+                    <button type="button" class="scale-btn" data-input="mental_demand" onclick="selectScale('mental_demand', '2'); event.preventDefault();">2</button>
+                    <button type="button" class="scale-btn" data-input="mental_demand" onclick="selectScale('mental_demand', '3'); event.preventDefault();">3</button>
+                    <button type="button" class="scale-btn" data-input="mental_demand" onclick="selectScale('mental_demand', '4'); event.preventDefault();">4</button>
+                    <button type="button" class="scale-btn" data-input="mental_demand" onclick="selectScale('mental_demand', '5'); event.preventDefault();">5</button>
+                    <button type="button" class="scale-btn" data-input="mental_demand" onclick="selectScale('mental_demand', '6'); event.preventDefault();">6</button>
+                    <button type="button" class="scale-btn" data-input="mental_demand" onclick="selectScale('mental_demand', '7'); event.preventDefault();">7</button>
+                </div>
+            </div>
+
+            <div class="tlx-question">
+                <h3>Physical Demand</h3>
+                <p>How physically demanding was the task?</p>
+                <input type="hidden" name="physical_demand" id="physical_demand" value="4" required>
+                <div class="button-scale">
+                    <button type="button" class="scale-btn" data-input="physical_demand" onclick="selectScale('physical_demand', '1'); event.preventDefault();">1</button>
+                    <button type="button" class="scale-btn" data-input="physical_demand" onclick="selectScale('physical_demand', '2'); event.preventDefault();">2</button>
+                    <button type="button" class="scale-btn" data-input="physical_demand" onclick="selectScale('physical_demand', '3'); event.preventDefault();">3</button>
+                    <button type="button" class="scale-btn" data-input="physical_demand" onclick="selectScale('physical_demand', '4'); event.preventDefault();">4</button>
+                    <button type="button" class="scale-btn" data-input="physical_demand" onclick="selectScale('physical_demand', '5'); event.preventDefault();">5</button>
+                    <button type="button" class="scale-btn" data-input="physical_demand" onclick="selectScale('physical_demand', '6'); event.preventDefault();">6</button>
+                    <button type="button" class="scale-btn" data-input="physical_demand" onclick="selectScale('physical_demand', '7'); event.preventDefault();">7</button>
+                </div>
+            </div>
+
+            <div class="tlx-question">
+                <h3>Temporal Demand</h3>
+                <p>How hurried or rushed was the pace of the task?</p>
+                <input type="hidden" name="temporal_demand" id="temporal_demand" value="4" required>
+                <div class="button-scale">
+                    <button type="button" class="scale-btn" data-input="temporal_demand" onclick="selectScale('temporal_demand', '1'); event.preventDefault();">1</button>
+                    <button type="button" class="scale-btn" data-input="temporal_demand" onclick="selectScale('temporal_demand', '2'); event.preventDefault();">2</button>
+                    <button type="button" class="scale-btn" data-input="temporal_demand" onclick="selectScale('temporal_demand', '3'); event.preventDefault();">3</button>
+                    <button type="button" class="scale-btn" data-input="temporal_demand" onclick="selectScale('temporal_demand', '4'); event.preventDefault();">4</button>
+                    <button type="button" class="scale-btn" data-input="temporal_demand" onclick="selectScale('temporal_demand', '5'); event.preventDefault();">5</button>
+                    <button type="button" class="scale-btn" data-input="temporal_demand" onclick="selectScale('temporal_demand', '6'); event.preventDefault();">6</button>
+                    <button type="button" class="scale-btn" data-input="temporal_demand" onclick="selectScale('temporal_demand', '7'); event.preventDefault();">7</button>
+                </div>
+            </div>
+
+            <div class="tlx-question">
+                <h3>Performance</h3>
+                <p>How successful were you in accomplishing what you were asked to do?</p>
+                <input type="hidden" name="performance" id="performance" value="4" required>
+                <div class="button-scale">
+                    <button type="button" class="scale-btn" data-input="performance" onclick="selectScale('performance', '1'); event.preventDefault();">1</button>
+                    <button type="button" class="scale-btn" data-input="performance" onclick="selectScale('performance', '2'); event.preventDefault();">2</button>
+                    <button type="button" class="scale-btn" data-input="performance" onclick="selectScale('performance', '3'); event.preventDefault();">3</button>
+                    <button type="button" class="scale-btn" data-input="performance" onclick="selectScale('performance', '4'); event.preventDefault();">4</button>
+                    <button type="button" class="scale-btn" data-input="performance" onclick="selectScale('performance', '5'); event.preventDefault();">5</button>
+                    <button type="button" class="scale-btn" data-input="performance" onclick="selectScale('performance', '6'); event.preventDefault();">6</button>
+                    <button type="button" class="scale-btn" data-input="performance" onclick="selectScale('performance', '7'); event.preventDefault();">7</button>
+                </div>
+            </div>
+
+            <div class="tlx-question">
+                <h3>Effort</h3>
+                <p>How hard did you have to work to accomplish your level of performance?</p>
+                <input type="hidden" name="effort" id="effort" value="4" required>
+                <div class="button-scale">
+                    <button type="button" class="scale-btn" data-input="effort" onclick="selectScale('effort', '1'); event.preventDefault();">1</button>
+                    <button type="button" class="scale-btn" data-input="effort" onclick="selectScale('effort', '2'); event.preventDefault();">2</button>
+                    <button type="button" class="scale-btn" data-input="effort" onclick="selectScale('effort', '3'); event.preventDefault();">3</button>
+                    <button type="button" class="scale-btn" data-input="effort" onclick="selectScale('effort', '4'); event.preventDefault();">4</button>
+                    <button type="button" class="scale-btn" data-input="effort" onclick="selectScale('effort', '5'); event.preventDefault();">5</button>
+                    <button type="button" class="scale-btn" data-input="effort" onclick="selectScale('effort', '6'); event.preventDefault();">6</button>
+                    <button type="button" class="scale-btn" data-input="effort" onclick="selectScale('effort', '7'); event.preventDefault();">7</button>
+                </div>
+            </div>
+
+            <div class="tlx-question">
+                <h3>Frustration</h3>
+                <p>How insecure, discouraged, irritated, stressed, and annoyed were you?</p>
+                <input type="hidden" name="frustration" id="frustration" value="4" required>
+                <div class="button-scale">
+                    <button type="button" class="scale-btn" data-input="frustration" onclick="selectScale('frustration', '1'); event.preventDefault();">1</button>
+                    <button type="button" class="scale-btn" data-input="frustration" onclick="selectScale('frustration', '2'); event.preventDefault();">2</button>
+                    <button type="button" class="scale-btn" data-input="frustration" onclick="selectScale('frustration', '3'); event.preventDefault();">3</button>
+                    <button type="button" class="scale-btn" data-input="frustration" onclick="selectScale('frustration', '4'); event.preventDefault();">4</button>
+                    <button type="button" class="scale-btn" data-input="frustration" onclick="selectScale('frustration', '5'); event.preventDefault();">5</button>
+                    <button type="button" class="scale-btn" data-input="frustration" onclick="selectScale('frustration', '6'); event.preventDefault();">6</button>
+                    <button type="button" class="scale-btn" data-input="frustration" onclick="selectScale('frustration', '7'); event.preventDefault();">7</button>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Continue</button>
+        </form>
+    </div>
+    <script>
+        // Highlight default button on load
+        window.addEventListener('load', function() {
+            const fields = ['mental_demand', 'physical_demand', 'temporal_demand', 'performance', 'effort', 'frustration'];
+            fields.forEach(field => {
+                const btn = document.querySelector(`button[data-input="${field}"]:nth-child(4)`);
+                if (btn) btn.classList.add('selected');
+            });
+        });
+    </script>
+</body>
+</html>

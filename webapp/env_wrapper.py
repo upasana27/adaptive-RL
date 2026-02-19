@@ -23,12 +23,21 @@ if _rebar_dir.exists() and str(_rebar_dir) not in sys.path:
 if str(_overcooked_dir) not in sys.path:
     sys.path.insert(0, str(_overcooked_dir))
 
+# Add parent dir for imports
+_parent_dir = Path(__file__).parent.parent
+if str(_parent_dir) not in sys.path:
+    sys.path.insert(0, str(_parent_dir))
+
 try:
     import numpy as np
     from PIL import Image
+    import torch
+    from environment.overcooked.policy import PretrainedPolicy_test
 except Exception:
     np = None
     Image = None
+    torch = None
+    PretrainedPolicy_test = None
 
 from typing import Optional
 
@@ -50,7 +59,7 @@ class MockEnv:
         self.step_count += 1
         self.last_action = action
         reward = 0.1 if action != 0 else 0.0  # Small reward for any action
-        self.done = self.step_count >= 50  # Shorter episodes for testing
+        self.done = self.step_count >= 1200  # 40 seconds at 30Hz
         obs = {}
         info = {'mock': True, 'action': action}
         return obs, reward, self.done, info
@@ -60,7 +69,7 @@ class MockEnv:
         # 0=NOOP (gray), 1=UP (red), 2=DOWN (blue), 3=LEFT (green), 4=RIGHT (yellow), 5=SPACE (purple)
         if np is None:
             return None
-        h, w = 480, 640
+        h, w = 467, 416
         arr = np.zeros((h, w, 3), dtype=np.uint8)
         
         # Base color depends on last action
@@ -100,6 +109,39 @@ class RandomPolicy:
     
     def info(self):
         return {'type': 'random', 'name': 'RandomAgent'}
+
+
+class PolicyAdapter:
+    """Adapter to handle both .act() and __call__() policy interfaces."""
+    def __init__(self, policy, world=None):
+        self.policy = policy
+        self.world = world
+        
+    def act(self, obs):
+        """Unified interface - works with both act() and __call__() policies."""
+        if hasattr(self.policy, 'act'):
+            return self.policy.act(obs)
+        elif callable(self.policy):
+            # For rule-based policies that use __call__(world)
+            # We need the world object, not obs
+            if self.world is not None:
+                return self.policy(self.world)
+            else:
+                # Fallback to random
+                return random.randint(0, 5)
+        else:
+            return random.randint(0, 5)
+    
+    def set_world(self, world):
+        """Update world reference for rule-based policies."""
+        self.world = world
+    
+    def info(self):
+        """Return policy info."""
+        if hasattr(self.policy, 'info'):
+            return self.policy.info()
+        else:
+            return {'type': 'rule_based', 'name': 'RuleBasedAgent'}
 
 
 class OvercookedWrapper:
@@ -214,8 +256,8 @@ class EnvManager:
             try:
                 from environment.overcooked.overcooked_maker import OvercookedMaker
                 
-                # Load config - use the same config as training (forced_coord_1_to_1_full.yaml)
-                config_path = Path(__file__).parent.parent / 'environment' / 'overcooked' / 'config' / 'forced_coord_1_to_1_full.yaml'
+                # Load config - use fc_small_test.yaml with specific recipes
+                config_path = Path(__file__).parent.parent / 'environment' / 'overcooked' / 'config' / 'fc_small_test.yaml'
                 
                 if config_path.exists():
                     import yaml
@@ -236,7 +278,7 @@ class EnvManager:
                         level=mode,
                         num_agents=config.get('num_agents', 2),
                         record=False,
-                        max_steps=200,  # 10 seconds at 20Hz action rate
+                        max_steps=10000,  # Very high limit - rely on time limit instead (40s at 30Hz * 2 agents = 2400 max steps needed)
                         recipes=config.get('recipes', []),
                         desire=[1] * 6,  # Default desire for all ingredients
                         obs_spaces=[config.get('obs_spaces', 'dense')],  # Must be a list
@@ -281,8 +323,11 @@ class EnvManager:
                             self.human_player = self.players[0]  # player_0
                             self.ai_player = self.players[1]  # player_1
                             self.episode_start_time = None
-                            self.time_limit_seconds = 600  # 10 minutes
+                            self.time_limit_seconds = 40  # 40 seconds per episode
                             self.steps_taken = 0
+                            self.recipes_delivered = 0
+                            # Store world agent mapping for debugging
+                            self.world_agent_mapping = {}
                             # Initialize graphics
                             self.graphic_pipeline.on_init()
                             
@@ -291,6 +336,10 @@ class EnvManager:
                             self._env.reset()
                             self.episode_start_time = time_module.time()
                             self.steps_taken = 0
+                            self.recipes_delivered = 0
+                            # Get world agent mapping
+                            if hasattr(self._env, 'world_agent_mapping'):
+                                self.world_agent_mapping = self._env.world_agent_mapping
                             # Reset AI policy history
                             if self.ai_policy and hasattr(self.ai_policy, 'reset_history'):
                                 self.ai_policy.reset_history()
@@ -298,7 +347,7 @@ class EnvManager:
                             return self._env.observe(self.human_player)
                         
                         def step(self, human_action):
-                            """Step with human action, AI acts automatically."""
+                            """Step BOTH agents together - collect human action, get AI action, execute both simultaneously."""
                             import time as time_module
                             
                             self.steps_taken += 1
@@ -310,41 +359,65 @@ class EnvManager:
                                 if elapsed >= self.time_limit_seconds:
                                     time_up = True
                             
-                            # Alternate between agents in AEC environment
-                            # Get current agent
+                            # Update world reference for rule-based policies
+                            if isinstance(self.ai_policy, PolicyAdapter):
+                                self.ai_policy.set_world(self._env.unwrapped.world if hasattr(self._env, 'unwrapped') else getattr(self._env, 'world', None))
+                            
+                            # Get current agent whose turn it is (should be human first)
                             agent = self._env.agent_selection
                             
+                            # Step human first
                             if agent == self.human_player:
-                                # Human's turn
                                 self._env.step(human_action)
                             else:
-                                # AI's turn - get action from policy
-                                ai_obs = self._env.observe(self.ai_player)
-                                ai_action = self.ai_policy.act(ai_obs)
-                                print(f"🤖 AI taking action: {ai_action}")
-                                self._env.step(ai_action)
+                                # If AI's turn somehow, just use NOOP for human
+                                self._env.step(0)
                             
-                            # Advance to next agent if needed
-                            if not self._env.dones.get(self.human_player, False):
-                                # Check if we need to do AI move
-                                if self._env.agent_selection == self.ai_player:
-                                    ai_obs = self._env.observe(self.ai_player)
-                                    ai_action = self.ai_policy.act(ai_obs)
-                                    print(f"🤖 AI taking additional action: {ai_action}")
-                                    self._env.step(ai_action)
+                            # Now it's AI's turn - get AI action and step
+                            ai_obs = self._env.observe(self.ai_player)
+                            ai_action_taken = self.ai_policy.act(ai_obs)
+                            self._env.step(ai_action_taken)
+                            
+                            # Now both agents have stepped and the world has updated (accumulated_step ran)
                             
                             # Get state for human player
                             obs = self._env.observe(self.human_player)
                             reward = self._env.rewards.get(self.human_player, 0)
-                            done = self._env.dones.get(self.human_player, False) or time_up
+                            
+                            # Count recipes delivered for tracking
+                            if reward >= 10.0:
+                                self.recipes_delivered += 1
+                            
+                            # Episode ends only on time limit or environment done flag
+                            env_done = self._env.dones.get(self.human_player, False)
+                            done = env_done or time_up
                             
                             info = {
                                 'elapsed_time': time_module.time() - self.episode_start_time if self.episode_start_time else 0,
                                 'steps_taken': self.steps_taken,
-                                'cumulative_reward': reward
+                                'cumulative_reward': reward,
+                                'recipes_delivered': self.recipes_delivered,
+                                'env_done': env_done,
+                                'time_up': time_up,
+                                'ai_action': ai_action_taken,  # Log AI action for trajectory
+                                'human_action': human_action,   # Log human action for trajectory
+                                'self_act': human_action  # For PACE history tracking
                             }
+                            if done:
+                                info['terminal_observation'] = obs
+                                info['termination_info'] = 'time_limit' if time_up else 'env_done'
+                            
                             if time_up:
                                 info['termination_reason'] = 'time_limit'
+                            elif env_done:
+                                info['termination_reason'] = 'env_done'
+                            
+                            # Update PACE agent history if using PretrainedPolicy_test
+                            if hasattr(self.ai_policy, 'update_opp_history'):
+                                from collections import namedtuple
+                                StepData = namedtuple('StepData', ['reward', 'done'])
+                                step_data = StepData(reward=[reward], done=done)
+                                self.ai_policy.update_opp_history(step_data, info)
                             
                             return obs, reward, done, info
                         
@@ -355,13 +428,13 @@ class EnvManager:
                                 if img is not None and hasattr(img, 'shape') and len(img.shape) == 3:
                                     return img
                                 # Fallback
-                                h, w = 700, 1300
+                                h, w = 467, 416
                                 arr = np.zeros((h, w, 3), dtype=np.uint8)
                                 arr[:, :] = [40, 120, 40]
                                 return arr
                             except Exception as e:
                                 print(f"⚠ Render error: {e}")
-                                h, w = 700, 1300
+                                h, w = 467, 416
                                 arr = np.zeros((h, w, 3), dtype=np.uint8)
                                 arr[:, :] = [40, 120, 40]
                                 return arr
@@ -369,17 +442,90 @@ class EnvManager:
                         def close(self):
                             if hasattr(self._env, 'close'):
                                 self._env.close()
+                        
+                        def get_world(self):
+                            """Get the underlying world for rule-based policies."""
+                            return self._env.unwrapped.world if hasattr(self._env, 'unwrapped') else getattr(self._env, 'world', None)
                     
                     # Get AI policy (random or trained model) BEFORE creating wrapper
                     if model:
-                        try:
-                            from webapp.models import REGISTRY
-                            ai_policy = REGISTRY.get_policy(model)
-                            print(f"✓ Loaded trained model: {model}")
-                        except Exception as e:
-                            print(f"⚠ Failed to load model {model}: {e}")
-                            ai_policy = RandomPolicy()
-                            print(f"✓ Using RandomPolicy instead")
+                        # Handle rule-based policies
+                        if model.startswith('rule_based'):
+                            try:
+                                # Import rule-based policy - ensure proper path setup
+                                import sys
+                                overcooked_path = str(Path(__file__).parent.parent / 'environment' / 'overcooked')
+                                if overcooked_path not in sys.path:
+                                    sys.path.insert(0, overcooked_path)
+                                
+                                # Import from correct module path
+                                import importlib
+                                policy_module = importlib.import_module('environment.overcooked.policy')
+                                RuleBasedPolicy = policy_module.RuleBasedPolicy
+                                
+                                # Create rule-based policy with different parameters
+                                env_name = config.get('mode', 'fc_small_divider_test')
+                                if model == 'rule_based_1':
+                                    # First rule-based agent - works with Onion + Lettuce recipe
+                                    ai_policy = RuleBasedPolicy('full', 0.3, 0.0, 0.0, None, env_name, 
+                                                              ingredient_support_set=['Onion', 'Lettuce'])
+                                else:  # rule_based_2
+                                    # Second rule-based agent - works with Potato + Broccoli recipe
+                                    ai_policy = RuleBasedPolicy('full', 0.5, 0.0, 0.0, None, env_name,
+                                                              ingredient_support_set=['Potato', 'Broccoli'])
+                                
+                                ai_policy.set_id(1)  # AI is player_1
+                                ai_policy = PolicyAdapter(ai_policy)
+                                print(f"✓ Loaded rule-based policy: {model}")
+                            except Exception as e:
+                                print(f"⚠ Failed to load rule-based policy {model}: {e}")
+                                import traceback
+                                traceback.print_exc()
+                                ai_policy = RandomPolicy()
+                                print(f"✓ Using RandomPolicy instead")
+                        elif model.startswith('pace'):
+                            # Handle PACE trained models
+                            try:
+                                model_dir = Path(__file__).parent.parent / 'logs' / 'Overcooked' / 'ppo_L2_right_seed6' / 'ppo'
+                                model_path = model_dir / 'latest.pt'
+                                
+                                if not model_path.exists():
+                                    raise FileNotFoundError(f"PACE model not found: {model_path}")
+                                
+                                # Create PretrainedPolicy_test instance
+                                ai_policy = PretrainedPolicy_test(
+                                    latent_training=True,
+                                    history_size=3,
+                                    has_rew_done=True,
+                                    has_meta_time_step=False,
+                                    include_current_episode=False,
+                                    merge_encoder_computation=True,
+                                    last_episode_only=False,
+                                    pop_oldest_episode=False,
+                                    self_obs_mode=True,
+                                    model_path=str(model_path),
+                                    eval_history=True,
+                                    agent_id=1,
+                                    device='cuda' if torch.cuda.is_available() else 'cpu'
+                                )
+                                ai_policy.set_id(1)  # AI is player_1
+                                print(f"✓ Loaded PACE model: {model_path}")
+                            except Exception as e:
+                                print(f"⚠ Failed to load PACE model {model}: {e}")
+                                import traceback
+                                traceback.print_exc()
+                                ai_policy = RandomPolicy()
+                                print(f"✓ Using RandomPolicy instead")
+                        else:
+                            # Handle trained models
+                            try:
+                                from webapp.models import REGISTRY
+                                ai_policy = REGISTRY.get_policy(model)
+                                print(f"✓ Loaded trained model: {model}")
+                            except Exception as e:
+                                print(f"⚠ Failed to load model {model}: {e}")
+                                ai_policy = RandomPolicy()
+                                print(f"✓ Using RandomPolicy instead")
                     else:
                         ai_policy = RandomPolicy()
                         print(f"✓ Using RandomPolicy for AI partner")
@@ -455,8 +601,17 @@ class EnvManager:
             if Image is None:
                 return ('', {'step': state.step, 'model': state.model.info() if state.model else None})
             im = Image.fromarray(arr)
+            # Downscale to 85% for faster encoding while maintaining quality (450x360 -> 383x306)
+            new_width = int(im.width * 0.85)
+            new_height = int(im.height * 0.85)
+            im = im.resize((new_width, new_height), Image.BILINEAR)
             buf = io.BytesIO()
-            im.save(buf, format='PNG')
+            # Try WebP for even faster encoding than JPEG
+            try:
+                im.save(buf, format='WEBP', quality=60, method=0)  # method=0 is fastest
+            except:
+                # Fallback to JPEG if WebP not available
+                im.save(buf, format='JPEG', quality=60, optimize=False, subsampling=2)
             b = buf.getvalue()
             b64 = base64.b64encode(b).decode('ascii')
             info = {'step': state.step, 'model': state.model.info() if state.model else None}

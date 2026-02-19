@@ -71,69 +71,57 @@ class ModelPolicy:
     stores checkpoint_path so later we can implement full loading.
     """
     def __init__(self, model_id: str, checkpoint_path: Optional[Path]):
+        import torch
         self.model_id = model_id
         self.checkpoint_path = Path(checkpoint_path) if checkpoint_path is not None else None
         self.loaded = False
         self._note = 'stub policy (heuristic fallback)'
         self.model = None
-        self.device = None
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        # History buffer for encoder (collect last N obs-action pairs)
-        self.history_size = 5  # From --history-size 5 in training script
-        self.obs_history = []  # List of observations
-        self.action_history = []  # List of actions
-        self._cached_latent = None
-        self._cached_params = None
+        # PACE history storage - matching policy.py lines 36-73
+        self.history_size = 5  # --history-size 5 from training
+        self.history = None  # Will be initialized after model is loaded
+        self.rnn_states = None
+        self.masks = None
+        self.last_obs = None
         
         # Try to load model immediately
         if self.checkpoint_path and self.checkpoint_path.exists():
             self._load_model()
 
     def _load_model(self):
-        """Load PyTorch model from checkpoint."""
+        """Load PACE model using PretrainedPolicy_test wrapper."""
         try:
-            import torch
+            import sys
+            import os
+            # Add paths for imports
+            sys.path.insert(0, '/home/asurite.ad.asu.edu/ubiswas2/adaptive-RL')
+            sys.path.insert(0, '/home/asurite.ad.asu.edu/ubiswas2/adaptive-RL/environment/overcooked')
+            sys.path.insert(0, '/home/asurite.ad.asu.edu/ubiswas2/adaptive-RL/environment/overcooked/gym_cooking/rebar')
             
-            self.device = torch.device('cpu')
+            from environment.overcooked.policy import PretrainedPolicy_test
             
-            # Load checkpoint (weights_only=False for compatibility with older checkpoints)
-            checkpoint = torch.load(self.checkpoint_path, map_location=self.device, weights_only=False)
+            # PACE model configuration (matching training parameters)
+            self.model = PretrainedPolicy_test(
+                latent_training=True,
+                history_size=5,
+                has_rew_done=False,
+                has_meta_time_step=False,
+                include_current_episode=True,
+                merge_encoder_computation=True,
+                last_episode_only=False,
+                pop_oldest_episode=True,
+                self_obs_mode=True,
+                model_path=str(self.checkpoint_path),
+                eval_history=True,
+                agent_id=0,
+                device='cuda' if self.device.type == 'cuda' else 'cpu'
+            )
             
-            # Check if checkpoint is the model itself or a state dict
-            if hasattr(checkpoint, 'eval'):
-                # Checkpoint is the model directly
-                self.model = checkpoint
-                self.model.eval()
-                self.model.to(self.device)
-                self.loaded = True
-                self._note = f'loaded model from {self.checkpoint_path.name}'
-                print(f"✓ Loaded model: {self.model_id} ({self.model.__class__.__name__})")
-            else:
-                # Checkpoint is a state dict - need to create model first
-                from learning.model import Policy
-                
-                obs_shape = (154,)  # Overcooked typical size
-                action_space_n = 6
-                
-                self.model = Policy(
-                    obs_shape,
-                    action_space_n,
-                    base_kwargs={'recurrent': False}
-                )
-                
-                # Load state dict
-                if 'model_state_dict' in checkpoint:
-                    self.model.load_state_dict(checkpoint['model_state_dict'])
-                elif 'state_dict' in checkpoint:
-                    self.model.load_state_dict(checkpoint['state_dict'])
-                else:
-                    self.model.load_state_dict(checkpoint)
-                
-                self.model.eval()
-                self.model.to(self.device)
-                self.loaded = True
-                self._note = f'loaded state dict from {self.checkpoint_path.name}'
-                print(f"✓ Loaded model: {self.model_id}")
+            self.loaded = True
+            self._note = f'loaded PACE model from {self.checkpoint_path.name}'
+            print(f"✓ Loaded model: {self.model_id} (PretrainedPolicy_test with LatentPolicy)")
             
         except Exception as e:
             print(f"⚠ Failed to load model {self.model_id}: {e}")
@@ -143,18 +131,76 @@ class ModelPolicy:
             self.model = None
             self._note = f'failed to load: {str(e)}'
     
+    def _init_history_storage(self):
+        """Initialize PeriodicHistoryStorage for PACE models matching policy.py setup."""
+        try:
+            import torch
+            from learning.storage_ import PeriodicHistoryStorage
+            
+            # Setup args and variables matching policy.py lines 36-73
+            self.num_test_policies = 1
+            self.num_eval_policies = 1
+            self.eval_history = True
+            self.update_history = True
+            self.last_obs = None
+            
+            # Create history storage exactly as in policy.py lines 71-91
+            self.history = PeriodicHistoryStorage(
+                num_processes=self.num_test_policies,
+                num_policies=self.num_test_policies,
+                history_storage_size=self.history_size,
+                clear_period=self.history_size,
+                refresh_interval=1,
+                sample_size=None,
+                has_rew_done=False,
+                max_samples_per_period=None,
+                step_mode=False,
+                use_episodes=True,
+                has_meta_time_step=False,
+                include_current_episode=True,
+                obs_shape=(73,),  # 71 base + 2 agent ID
+                act_shape=tuple(),
+                max_episode_length=40,
+                merge_encoder_computation=True,
+                last_episode_only=False,
+                pop_oldest_episode=True,
+            )
+            self.history.to(self.device)
+            
+            # Initialize RNN states and masks exactly as in policy.py lines 64-69
+            if hasattr(self.model, 'is_recurrent') and self.model.is_recurrent:
+                rnn_dim = self.model.rnn_hidden_dim
+                num_states = 1 if self.model.share_actor_critic else 2
+                self.rnn_states = torch.zeros(self.num_eval_policies, rnn_dim * num_states).to(self.device)
+            else:
+                self.rnn_states = None
+            
+            self.masks = torch.zeros(self.num_eval_policies, 1).to(self.device)
+            
+            print(f"✓ Initialized history storage for {self.model_id} (history_size={self.history_size})")
+
+        except Exception as e:
+            print(f"⚠ Failed to initialize history storage for {self.model_id}: {e}")
+            self.history = None
+    
     def load(self):
         """Public load method (for compatibility)."""
         if not self.loaded and self.checkpoint_path:
             self._load_model()
     
     def reset_history(self):
-        """Reset history buffer (call between rounds/episodes)."""
-        self.obs_history = []
-        self.action_history = []
-        self._cached_latent = None
-        self._cached_params = None
-        print(f"🔄 Reset history for {self.model_id}")
+        """Reset history buffer (call between episodes)."""
+        if hasattr(self, 'history') and self.history is not None:
+            self.history.clear()
+            # Reset RNN states and masks
+            if self.rnn_states is not None:
+                self.rnn_states.zero_()
+            if hasattr(self, 'masks'):
+                self.masks.zero_()
+            self.last_obs = None
+            print(f"🔄 Reset history for {self.model_id}")
+        else:
+            print(f"🔄 Reset (no history) for {self.model_id}")
 
     def act(self, obs):
         """Return an action for given observation.
@@ -202,44 +248,35 @@ class ModelPolicy:
             # Convert to tensor
             obs_tensor = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
             
-            # Add observation to history
-            self.obs_history.append(obs)
-            if len(self.obs_history) > self.history_size:
-                self.obs_history.pop(0)
+            # Use policy.act() with history exactly like policy.py __call__ method (lines 110-118)
+            with torch.no_grad():
+                if self.eval_history and hasattr(self, 'history') and self.history is not None:
+                    all_agent_indices = torch.arange(1).to(self.device)
+                    indices = self.history.get_all_current_indices()
+                    history = (self.history, (all_agent_indices,) + indices)
+                    
+                    # Call model.act with history (matching policy.py line 113)
+                    _, action, action_log_prob, self.rnn_states = self.model.act(
+                        obs_tensor,
+                        self.rnn_states,
+                        self.masks,
+                        all_agent_indices,
+                        history=history,
+                        deterministic=False
+                    )
+                else:
+                    # No history - shouldn't happen for PACE models
+                    raise ValueError(f"PACE model {self.model_id} requires history storage")
             
-            # LatentPolicy/PACE: use actor with latent
-            if hasattr(self.model, 'actor') and self.model.actor is not None:
-                actor = self.model.actor
-                
-                # RNN state (zeros if recurrent)
-                rnn_hxs = None  # Model is not recurrent
-                masks = torch.ones(1, 1).to(self.device)
-                
-                # TODO: Implement proper PeriodicHistoryStorage for full PACE encoder adaptation
-                # For now, sample random latent at each step to get varied behavior
-                # This is better than fixed latent which causes AI to get stuck
-                # Full PACE adaptation requires:
-                #   1. PeriodicHistoryStorage with episode/period/step tracking
-                #   2. Proper indices format: (proc_idx, period_idx, episode_idx, length_idx)
-                #   3. Agent indices mapping for multi-agent coordination
-                # See train_.py lines 640-650 and evaluation_.py lines 70-80 for reference
-                
-                latent_dim = self.model.encoder.latent_dim
-                latents = torch.randn(1, latent_dim).to(self.device) * 0.3  # Sample from N(0, 0.3^2)
-                
-                # Call actor.act (use deterministic=False for stochastic policy)
-                with torch.no_grad():
-                    action, _, _, _ = actor.act(obs_tensor, rnn_hxs, masks, latents, deterministic=False)
-                    action_int = int(action.item())
-                
-                # Add action to history for future encoder implementation
-                self.action_history.append(action_int)
-                if len(self.action_history) > self.history_size:
-                    self.action_history.pop(0)
-                
-                return action_int
-            else:
-                raise NotImplementedError("Model structure not recognized")
+            # Store observation for next step (matching policy.py line 151)
+            self.last_obs = obs_tensor
+            
+            # Extract action int
+            if str(action.device) == 'cuda':
+                action = action.unsqueeze(-1)
+            action_int = action.squeeze(-1).item()
+            
+            return action_int
             
         except Exception as e:
             print(f"⚠ Error in model inference for {self.model_id}: {e}")

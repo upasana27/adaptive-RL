@@ -15,10 +15,9 @@ key_map:
   d: 4
 
 models:
-  - ppo_pace_seed1
-  - ppo_pace_two_ing_1_seed1
-  - ppo_pace_two_ing_2_seed1
-  - ppo_pace_two_ing_3_seed1
+  - rule_based_1
+  - rule_based_2
+  - pace_agent
 
 # levels: empty -> auto-discover from environment/overcooked or set explicitly
 levels: []

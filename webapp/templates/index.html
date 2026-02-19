@@ -3,38 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overcooked User Study</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Collaborative Cooking Study</title>
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+    
+    <style>
+      body {
+        font-size: 16px;
+        line-height: 1.7;
+        background-color: #f8f9fa;
+        padding: 20px 0;
+      }
+      .container-main {
+        max-width: 900px;
+        background-color: white;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin: 20px auto;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        font-weight: bold;
+        color: #2c3e50;
+        font-size: 32px;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: bold;
+        color: #34495e;
+        margin-top: 25px;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+      }
+      p {
+        color: #555;
+        margin-bottom: 15px;
+      }
+      .intro-text {
+        font-size: 17px;
+        color: #666;
+        margin-bottom: 25px;
+        line-height: 1.8;
+      }
+      ul {
+        margin-left: 25px;
+        margin-bottom: 20px;
+      }
+      li {
+        margin-bottom: 12px;
+        color: #555;
+      }
+      .info-section {
+        margin-bottom: 25px;
+      }
+      .form-section {
+        background-color: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        margin-top: 30px;
+        border-left: 4px solid #6c757d;
+      }
+      .form-section h3 {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        margin-top: 0;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        box-sizing: border-box;
+      }
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+      }
+      .consent-section {
+        background-color: white;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+      }
+      .consent-section label {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 0;
+        font-weight: normal;
+        cursor: pointer;
+      }
+      .consent-section input[type="checkbox"] {
+        margin-right: 12px;
+        margin-top: 3px;
+        cursor: pointer;
+        width: auto;
+      }
+      .btn-start {
+        padding: 12px 40px;
+        font-size: 18px;
+        font-weight: bold;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.2s;
+      }
+      .btn-start:hover {
+        background-color: #0056b3;
+      }
+      .btn-start:active {
+        transform: scale(0.98);
+      }
+      @media (max-width: 768px) {
+        .container-main {
+          padding: 20px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+      }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Overcooked Collaboration Study</h1>
-        <div class="content">
-            <p>Thank you for participating in our study on human-AI collaboration!</p>
-            <p>You will play several rounds of an Overcooked-style cooking game with different AI partners. Your task is to work together to prepare dishes as efficiently as possible.</p>
-            
-            <h3>Before you begin:</h3>
-            <ul>
-                <li>The study takes approximately 15-20 minutes</li>
-                <li>You'll play 8 rounds total (2 rounds with each of 4 AI partners)</li>
-                <li>Use arrow keys to move and Space to interact</li>
-                <li>Your responses will be anonymized</li>
-            </ul>
+    <div class="container-main">
+      <h1>Collaborative Cooking Study</h1>
+      
+      <p class="intro-text">
+        Thank you for participating in our study on human-AI collaboration! 
+        In this study, you will play a cooking game with an AI partner.
+      </p>
 
-            <form action="/start" method="POST" class="start-form">
-                <label for="alias">Please enter a nickname or alias:</label>
-                <input type="text" id="alias" name="alias" required placeholder="e.g., Player123">
-                
-                <div class="consent">
-                    <label>
-                        <input type="checkbox" name="consent" required>
-                        I consent to participate and understand my data will be used for research purposes
-                    </label>
-                </div>
-                
-                <button type="submit" class="btn-primary">Start Study</button>
-            </form>
+      <!-- What to Expect Section -->
+      <div class="info-section">
+        <h2>What to Expect</h2>
+        <ul>
+          <li><strong>Study Duration:</strong> Approximately 15 minutes total</li>
+          <li><strong>Game Rounds:</strong> You will play multiple rounds of a collaborative cooking game</li>
+          <li><strong>AI Partners:</strong> You will interact with different AI partners throughout the study</li>
+          <li><strong>After Each Round:</strong> You'll complete a brief questionnaire about your experience</li>
+          <li><strong>IRB Approval:</strong> This study has been reviewed and approved by the Institutional Review Board (IRB) with code: <strong>55564726</strong></li>
+        </ul>
+      </div>
+
+      <!-- Confidentiality Section -->
+      <div class="info-section">
+        <h2>Confidentiality & Data Protection</h2>
+        <ul>
+          <li><strong>Privacy:</strong> All data collected during this study will be kept strictly confidential</li>
+          <li><strong>Anonymity:</strong> Your personal information will remain anonymous and will only be accessible by authorized research investigators</li>
+          <li><strong>Data Use:</strong> The information will only be used for research purposes and will not be shared with any external entities</li>
+          <li><strong>Your Rights:</strong> You have the right to withdraw from the study at any time without penalty</li>
+        </ul>
+      </div>
+
+      <!-- Compensation Section -->
+      <div class="info-section">
+        <h2>Remuneration</h2>
+        <ul>
+          <li><strong>Completion Code:</strong> At the end of the study (when you click "Submit"), you will be provided with a Prolific Remuneration Code</li>
+          <li><strong>Getting Paid:</strong> Please retain that code for your reference and enter it in the Prolific Interface to receive your remuneration</li>
+          <li><strong>Important:</strong> Make sure to copy and save the code before leaving the study page</li>
+        </ul>
+      </div>
+
+      <!-- Consent & Start Form -->
+      <form action="/start" method="POST" class="form-section">
+        <h3>Ready to Participate?</h3>
+        
+        <div class="form-group">
+          <label for="alias">Please enter a nickname or alias:</label>
+          <input type="text" id="alias" name="alias" required placeholder="e.g., Player123" autocomplete="off">
         </div>
+
+        <div class="consent-section">
+          <label>
+            <input type="checkbox" name="consent" required>
+            <span>I consent to participate in this study and understand that my responses will be used for research purposes. I also understand that my data will be kept confidential and anonymous.</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn-start">Start Study</button>
+      </form>
     </div>
-</body>
+
+    <script src="../static/lib/jquery-min.js"></script>
+    <script src="../static/js/bootstrap.min.js"></script>
+  </body>
 </html>

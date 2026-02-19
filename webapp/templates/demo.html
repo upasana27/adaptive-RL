@@ -3,36 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo - Overcooked Study</title>
+    <title>{{ round_name }} - Overcooked Study</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        .main-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .game-section {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .instructions-section {
+            width: 350px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 22px;
+            color: #2c3e50;
+        }
+        h3 {
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            color: #34495e;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .episode-info {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .game-container {
+            margin: 10px 0;
+        }
+        canvas {
+            width: 700px !important;
+            height: 700px !important;
+            max-width: 700px !important;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            display: block;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .btn-primary, .btn-secondary {
+            padding: 10px 30px;
+            margin: 10px 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .instructions-section ul {
+            margin-left: 20px;
+            padding-left: 0;
+        }
+        .instructions-section li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        .controls-box {
+            background-color: #e7f3ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #007bff;
+        }
+        .controls-box p {
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        @media (max-width: 1000px) {
+            .main-container {
+                flex-direction: column;
+            }
+            .instructions-section {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Practice Round</h2>
-        <div class="instructions">
-            <p><strong>Controls:</strong></p>
+    <div class="main-container">
+        <div class="game-section">
+            <h2>{{ round_name }}</h2>
+            
+            <div class="game-container">
+                <div class="game-info" style="margin-bottom: 10px; justify-content: space-between;">
+                    <div class="info-item">
+                        <span class="label">Episode:</span>
+                        <span id="episode-counter" class="value">1</span> / {{ episodes_total }}
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Time:</span>
+                        <span id="timer" class="value">40s</span>
+                    </div>
+                </div>
+                <canvas id="gameCanvas" width="700" height="700"></canvas>
+                <div id="status" class="status">Connecting...</div>
+            </div>
+
+            <button id="startDemo" class="btn-primary">Start {{ round_name }}</button>
+            <a href="/transition" class="btn-secondary" style="display: none;" id="continueBtn">Continue to Trial Rounds →</a>
+        </div>
+
+        <div class="instructions-section">
+            <h3>Controls</h3>
+            <div class="controls-box">
+                <p>↑ ↓ ← → : Move</p>
+                <p>Spacebar: Interact</p>
+            </div>
+
+            <h3>How to Play</h3>
             <ul>
-                <li>↑ ↓ ← → : Move around</li>
-                <li>Space: Interact (pick up/drop items)</li>
+                <li><strong>1. Pick up ingredient</strong>
+                    <ul>
+                        <li>Go to ingredient station on your side</li>
+                        <li>Face ingredient and press Spacebar</li>
+                    </ul>
+                </li>
+                <li><strong>2. Chop the ingredient</strong>
+                    <ul>
+                        <li>Bring to chopping board</li>
+                        <li>Face board and press Spacebar</li>
+                    </ul>
+                </li>
+                <li><strong>3. Place on shared plate</strong>
+                    <ul>
+                        <li>Pick up chopped ingredient</li>
+                        <li>Move to center counter plate</li>
+                        <li>Face plate and press Spacebar</li>
+                    </ul>
+                </li>
+                <li><strong>4. Deliver the dish</strong>
+                    <ul>
+                        <li>Right-side agent picks up completed dish</li>
+                        <li>Deliver to serving station to finish</li>
+                    </ul>
+                </li>
             </ul>
-            <p>Try the controls below. This is just practice - your performance here won't be recorded.</p>
         </div>
-
-        <div class="game-container">
-            <canvas id="gameCanvas" width="700" height="1300"></canvas>
-            <div id="status" class="status">Connecting...</div>
-        </div>
-
-        <button id="startDemo" class="btn-primary">Start Practice</button>
-        <a href="/game" class="btn-secondary" style="display: none;" id="continueBtn">Continue to Study →</a>
     </div>
 
     <script>
         const PARTICIPANT_ID = "{{ participant_id }}";
-        const IS_DEMO = true;
-        const LEVEL_ID = "demo";
-        const MODEL_ID = null;
+        const IS_DEMO = false;
+        const LEVEL_ID = "default";
+        const MODEL_ID = {% if model_id %}{{ model_id|tojson }}{% else %}null{% endif %};
+        const EPISODES_TOTAL = {{ episodes_total }};
+        const CURRENT_ROUND = 1;  // Practice round is always round 1
+        let currentEpisode = 1;
+        
+        // Update episode counter when episode ends
+        window.addEventListener('episode_end', function() {
+            currentEpisode++;
+            document.getElementById('episode-counter').textContent = currentEpisode;
+        });
     </script>
     <script src="/static/js/game.js"></script>
 </body>

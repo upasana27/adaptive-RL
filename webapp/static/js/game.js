@@ -5,8 +5,9 @@
     'use strict';
 
     // Configuration
-    const TICK_RATE = 50; // ms between action sends (20Hz for responsive controls)
+    const TICK_RATE = 100; // ms between action sends (match 10Hz server game loop)
     const NOOP_ACTION = 0;
+    const EPISODE_TIME_LIMIT = 40; // 40 seconds per episode
     
     // Action mapping: keyboard keys to action codes
     // Based on ActionScheme4: 0=NOOP, 1=LEFT, 2=RIGHT, 3=DOWN, 4=UP, 5=INTERACT
@@ -37,10 +38,12 @@
     let connected = false;
     let gameActive = false;
     let currentAction = NOOP_ACTION;
+    let lastSentAction = NOOP_ACTION;  // Track last sent action to avoid duplicates
     let pressedKeys = new Set();
     let actionInterval = null;
     let startTime = null;
     let timerInterval = null;
+    let actionIdCounter = 0;  // Counter to generate unique action IDs
 
     // Initialize
     function init() {
@@ -77,6 +80,7 @@
         socket.on('disconnect', onDisconnect);
         socket.on('joined', onJoined);
         socket.on('frame', onFrame);
+        socket.on('episode_complete', onEpisodeComplete);
         socket.on('end_round', onEndRound);
         socket.on('error', onError);
     }
@@ -90,7 +94,8 @@
             participant_id: PARTICIPANT_ID || null,
             level: LEVEL_ID || 'demo',
             model: MODEL_ID || null,
-            demo: IS_DEMO || false
+            demo: IS_DEMO || false,
+            total_episodes: EPISODES_TOTAL || 1
         };
         
         socket.emit('join_session', payload);
@@ -114,6 +119,9 @@
     function onFrame(data) {
         if (!data || !data.frame) return;
         
+        const frameRecvTime = Date.now();
+        console.log(`[FRAME_RECV] time=${frameRecvTime}`);
+        
         // Draw frame on canvas
         const img = new Image();
         img.onload = function() {
@@ -136,49 +144,83 @@
         }
     }
 
+    function onEpisodeComplete(data) {
+        // Episode finished but more episodes to play in this round
+        const summary = data.summary || {};
+        const episodeNum = data.episode || 1;
+        const totalEpisodes = data.total_episodes || 1;
+        
+        setStatus(`Episode ${episodeNum}/${totalEpisodes} complete! Starting next episode...`, 'connected');
+        
+        // Update episode counter
+        if (typeof currentEpisode !== 'undefined') {
+            currentEpisode++;
+            if (document.getElementById('episode-counter')) {
+                document.getElementById('episode-counter').textContent = currentEpisode;
+            }
+        }
+        
+        // Reset timer for next episode
+        stopTimer();
+        setTimeout(() => {
+            startTimer();
+            setStatus('Playing...', 'playing');
+        }, 1000);
+    }
+
     function onEndRound(data) {
         gameActive = false;
         stopActionLoop();
         stopTimer();
         
         const summary = data.summary || {};
-        setStatus(`Round complete! Steps: ${summary.steps || 0}`, 'connected');
+        setStatus(`Round complete!`, 'connected');
         
-        if (IS_DEMO && continueBtn) {
+        if (continueBtn) {
+            // Show continue button
             continueBtn.style.display = 'inline-block';
+            continueBtn.textContent = 'Continue';
+            
+            // Always go to advance_round which handles routing server-side
+            continueBtn.href = '/advance_round';
         } else {
-            // Auto-advance to next round
+            // Auto-advance after a short delay
             setTimeout(() => {
-                window.location.href = '/game';
-            }, 3000);
+                window.location.href = '/advance_round';
+            }, 2000);
         }
     }
 
     function onError(data) {
-        setStatus('Error: ' + (data.msg || 'Unknown error'), 'error');
+        setStatus('Please proceed to next round', 'connected');
         console.error('Server error:', data);
     }
 
     function startActionLoop() {
-        // Actions are now sent immediately on keypress/release
-        // This interval is just a heartbeat in case no keys are pressed
+        // Send current action at 10Hz to keep in sync with server
         if (actionInterval) return;
         
         actionInterval = setInterval(() => {
             if (!socket || !connected || !gameActive) return;
-            // Only send NOOP if we haven't sent anything recently
-            if (currentAction === null && Date.now() - lastActionTime > 200) {
-                sendAction(NOOP_ACTION);
-            }
-        }, 200); // Heartbeat at 5Hz
+            const actionToSend = currentAction !== null ? currentAction : NOOP_ACTION;
+            sendAction(actionToSend);
+        }, TICK_RATE);
     }
     
     let lastActionTime = 0;
     function sendAction(action) {
         if (!socket || !connected || !gameActive) return;
+        
+        // Only increment action ID if the action actually changed
+        if (action !== lastSentAction) {
+            actionIdCounter++;
+        }
+        lastSentAction = action;
+        
         socket.emit('action', {
             participant_id: PARTICIPANT_ID || null,
             action: action,
+            action_id: actionIdCounter,  // Unique ID for this action
             client_ts: Date.now()
         });
         lastActionTime = Date.now();
@@ -195,25 +237,23 @@
         startTime = Date.now();
         if (timerInterval) clearInterval(timerInterval);
         
-        const TIME_LIMIT = 600; // 10 minutes in seconds
-        
         timerInterval = setInterval(() => {
             if (!startTime || !timerEl) return;
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const remaining = Math.max(0, TIME_LIMIT - elapsed);
+            const remaining = Math.max(0, EPISODE_TIME_LIMIT - elapsed);
             
             const minutes = Math.floor(remaining / 60);
             const seconds = remaining % 60;
-            timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            timerEl.textContent = `${seconds}s`;
             
             // Warning when time is low
-            if (remaining <= 30 && remaining > 0) {
+            if (remaining <= 10 && remaining > 0) {
                 timerEl.style.color = '#ff6b6b';
             } else if (remaining === 0) {
                 timerEl.style.color = '#ff0000';
                 timerEl.textContent = 'TIME UP!';
             }
-        }, 1000);
+        }, 100); // Update more frequently (10Hz) for smoother countdown
     }
 
     function stopTimer() {
@@ -232,7 +272,11 @@
         const action = KEY_MAP[key];
         if (action !== undefined) {
             currentAction = action;
-            sendAction(action); // Send immediately for instant response
+            console.log(`[KEY_DOWN] key=${key}, action=${action}, time=${Date.now()}`);
+            // Send immediately for instant feedback
+            if (gameActive) {
+                sendAction(action);
+            }
             e.preventDefault();
         }
     }
@@ -252,8 +296,11 @@
         currentAction = fallbackAction;
         
         // Send immediately when key released
-        if (KEY_MAP[e.key] !== undefined) {
+        if (KEY_MAP[e.key] !== undefined && gameActive) {
             sendAction(fallbackAction);
+        }
+        
+        if (KEY_MAP[e.key] !== undefined) {
             e.preventDefault();
         }
     }

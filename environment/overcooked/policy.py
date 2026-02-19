@@ -11,9 +11,8 @@ from gym_cooking.cooking_world.world_objects import *
 from gym_cooking.cooking_world.abstract_classes import *
 from gym_cooking.environment.cooking_zoo import Ingred2ID
 from learning.model import LatentPolicy
+from learning.storage_ import PeriodicHistoryStorage
 import subprocess
-from environment.cooking_zoo import CookingEnvironment
-from environment import cooking_zoo
 static_objects = ['CutBoard','DeliverSquare','Divider','Plate']
 ingredients = ['Lettuce','Tomato','Potato','Onion','Carrot','Broccoli']
 dynamic_objects = ['Plate'] + ingredients
@@ -35,122 +34,209 @@ class event:
     def __str__(self):
         return f'Event(action={self.action}, dynamic_obj={self.dynamic_obj}, static_obj={self.static_obj})'
 
-class PretrainedPolicy:
-    def __init__(self,level=None, num_agents=None, record=False, 
-                max_steps=None, recipes=None, obs_spaces=["dense_partial"],desire=None, obs_range=15,
+class PretrainedPolicy_test:
+    def __init__(self,latent_training, history_size, has_rew_done, has_meta_time_step,  include_current_episode, merge_encoder_computation, last_episode_only, pop_oldest_episode, self_obs_mode, level=None,          num_agents=None, record=False, 
+                max_steps=None, recipes=None, obs_spaces=["dense"],desire=None, obs_range=15,
                 interact_reward=0.5, progress_reward=1.0,
-                complete_reward=10.0, step_cost=0.05,model_path=None, agent_id=0, device='cpu'):
+                complete_reward=10.0, step_cost=0.05,model_path=None,eval_history=True,agent_id=0, device='cuda'):
         # Lazy init. The model is loaded only when the first observation is received, in the environment process
         # This guarantees that no tensor needs to be moved across processes
         self.model_path = model_path
         self.agent_id = agent_id
         self.num_agents = 2
-        self.possible_agents = ["player_" + str(r) for r in range(self.num_agents)]
-        self.agents = self.possible_agents[:]
-        self.peer_agent = self.agents[self.agent_id]
+        self.num_test_policies = 1
         self.num_eval_policies = 1
         self.device = device
-        # self.use_policy_cls_reward = args.policy_cls_reward_coef is not None and inspect_idx is not None
-        # if self.use_policy_cls_reward:
-        #     assert args.policy_cls_reward_coef == 0.0
-        # self.policy_cls_reward_tracker = PolicyClassificationRewardTracker(args, num_eval_policies, num_eval_policies) \
+        self.eval_history = eval_history
+        self.model_path = model_path
+        self.update_history = True
+        self.self_obs_mode = self_obs_mode
+        self.latent_training = latent_training 
+        self.history_size = history_size
+        self.has_rew_done = has_rew_done
+        self.has_meta_time_step = has_meta_time_step 
+        self.include_current_episode = include_current_episode
+        self.merge_encoder_computation = merge_encoder_computation 
+        self.last_episode_only = last_episode_only 
+        self.pop_oldest_episode = pop_oldest_episode
+        self.self_obs_mode = self_obs_mode
+        self.last_obs = None
+        #self.use_policy_cls_reward = args.policy_cls_reward_coef is not None and inspect_idx is not None
+        #if self.use_policy_cls_reward:
+         #   assert args.policy_cls_reward_coef == 0.0
+        #self.policy_cls_reward_tracker = PolicyClassificationRewardTracker(args, num_eval_policies, num_eval_policies) \
         #     if use_policy_cls_reward else Nonei
         self.dump_latents = False
         self.opp_policies = 1
         self.policy = self.load(model_path)
-        self.env = cooking_zoo.parallel_env(level=level, num_agents=self.num_agents, record=False, 
-                                        max_steps=max_steps, recipes=recipes, obs_spaces=["dense_partial"],desire=desire, obs_range=15,
-                                        interact_reward=0.5, progress_reward=1.0,
-                                        complete_reward=10.0, step_cost=0.05)
-        # self.world = CookingWorld()
+        
+        # DEBUG: Print model expected input size
+        if hasattr(self.policy, 'encoder') and hasattr(self.policy.encoder, 'base'):
+            if hasattr(self.policy.encoder.base, 'pre_agg_mlp'):
+                first_layer = list(self.policy.encoder.base.pre_agg_mlp.mlp.children())[0]
+                print(f"[DEBUG] Model expects input size: {first_layer.in_features}")
+                print(f"[DEBUG] Current config: has_rew_done={self.has_rew_done}, has_meta_time_step={self.has_meta_time_step}")
+                print(f"[DEBUG] Base obs size: 73, Expected total: {first_layer.in_features}")
+                print(f"[DEBUG] Difference: {first_layer.in_features - 73} extra dimensions needed")
+        
+        if self.policy.is_recurrent:
+             self.rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to(self.device)
+        else:
+            self.rnn_states = None   
+        self.masks = torch.zeros(self.num_eval_policies, 1).to(self.device)       
+        if self.latent_training:
+            print(f"[DEBUG] Creating history storage with obs_shape=(73,)")
+            self.history = PeriodicHistoryStorage(
+                num_processes=self.num_test_policies,
+                num_policies=self.num_test_policies,
+                history_storage_size=self.history_size,
+                clear_period=self.history_size,
+                refresh_interval=1,
+                sample_size=None,
+                has_rew_done=self.has_rew_done,
+                max_samples_per_period=None,
+                step_mode=False,
+                use_episodes=True,
+                has_meta_time_step=self.has_meta_time_step,
+                include_current_episode=self.include_current_episode,
+                obs_shape=(76,),  # 73 base + 3 storage augmentation (meta+rew+done)
+                act_shape=tuple(),
+                max_episode_length=40,
+                merge_encoder_computation=self.merge_encoder_computation,
+                last_episode_only=self.last_episode_only,
+                pop_oldest_episode=self.pop_oldest_episode,
+            )   
+            self.history.to(self.device)
+        else:
+            self.history = None
     def load(self, model_path):
+        # print("model path:", model_path)
         while os.path.exists(model_path):
             # print("this is the model path", model_path)
-            device = torch.device('cpu')
-            torch.serialization.add_safe_globals([LatentPolicy])
-            policy = torch.load(model_path, map_location=device, weights_only=False)
+            device = torch.device(self.device)
+            #torch.serialization.add_safe_globals([LatentPolicy])
+            policy = torch.load(model_path, map_location=device)
             return policy
 
 
     def set_id(self, aid):
         self.agent_id = aid
 
-    def __call__(self, world):
-        self.env.world = world
-        obs = self.env.observe(self.peer_agent)  
-        if self.policy.is_recurrent:
-            rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to(obs.device)
-        else:
-            rnn_states = None   
-        masks = torch.zeros(self.num_eval_policies, 1).to(self.device)
-        done = np.array([True] * num_eval_policies)   
+    def __call__(self, observation, previous_step=None):
+
         with torch.no_grad():
-            if eval_history is not None:
-                all_agent_indices = 1
-                indices = 0
-                #history = (eval_history, (all_agent_indices,) + indices)
-                history = None
-                _, action, action_log_prob, rnn_states = self.policy.act(obs, rnn_states, masks, all_agent_indices, history=history, deterministic=False)
-            if self.dump_latents:
-                assert self.policy.last_latents is not None
-                assert len(policy.last_latents) == num_opp_policies
-                for i in range(num_opp_policies):
-                    eval_stats_by_opponent['latents'][i][-1].append(policy.last_latents[i].clone())
-            #policy_pred = self.policy.aux_pol_cls_head(policy.last_latents) if args.use_policy_cls_reward else None
-        if str(action.device) == 'cpu':
+            if self.eval_history is not None:
+                all_agent_indices = torch.arange(1)
+                indices = self.history.get_all_current_indices()
+                history = (self.history, (all_agent_indices,) + indices)
+                #history = None
+                # print(observation.shape)
+                # Convert observation to tensor if it's a numpy array
+                if isinstance(observation, np.ndarray):
+                    observation = torch.from_numpy(observation).float().unsqueeze(0).to(self.device)
+                _, action, action_log_prob, rnn_states = self.policy.act(observation, self.rnn_states, self.masks, all_agent_indices, history=history, deterministic=False)
+            self.rnn_states = rnn_states
+            #policy_pred = self.policy.aux_pol_cls_head(self.policy.last_latents) if use_policy_cls_reward else None
+        if str(action.device) == 'cuda' or str(action.device) == 'cpu':
             action = action.unsqueeze(-1)
-        # port env and world here, for now comment it out
-        # obs, reward, done, infos = self.env.step(action.squeeze(-1))
-        #if use_policy_cls_reward:
-         #   policy_cls_reward_tracker.advance(reward, infos, policy_pred, prev_agent_perm_all, inspect_idx)
-          #  input(f'Actual reward {reward[inspect_idx]}, policy classification reward {infos[inspect_idx]["expl_reward"]}'
-        return action.squeeze(-1)
-    # this is defined for the visualization only
-    def get_action(self,world):
-        self.env.world = world
-        obs = self.env.unwrapped.observe(self.peer_agent)  
-        if self.policy.is_recurrent:
-            rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to(obs.device)
-        else:
-            rnn_states = None   
-        masks = torch.zeros(self.num_eval_policies, 1).to('cpu')
-        done = np.array([True] * self.num_eval_policies)   
-        eval_history = None
-        with torch.no_grad():
-            if eval_history is  None:
-                all_agent_indices = 1
-                indices = 0
-                #history = (eval_history, (all_agent_indices,) + indices)
-                history = None
-                _, action, action_log_prob, rnn_states = self.policy.act(obs, rnn_states, masks, all_agent_indices, history=history, deterministic=False)
-            if self.dump_latents:
-                assert self.policy.last_latents is not None
-                assert len(policy.last_latents) == num_opp_policies
-                for i in range(num_opp_policies):
-                    eval_stats_by_opponent['latents'][i][-1].append(policy.last_latents[i].clone())
-            #policy_pred = self.policy.aux_pol_cls_head(policy.last_latents) if args.use_policy_cls_reward else None
-        if str(action.device) == 'cpu':
-            action = action.unsqueeze(-1)
-        # port env and world here, for now comment it out
-        # obs, reward, done, infos = self.env.step(action.squeeze(-1))
-        #if use_policy_cls_reward:
-         #   policy_cls_reward_tracker.advance(reward, infos, policy_pred, prev_agent_perm_all, inspect_idx)
-          #  input(f'Actual reward {reward[inspect_idx]}, policy classification reward {infos[inspect_idx]["expl_reward"]}'
-        return action.squeeze(-1)
+        # print(previous_step)
+        # if previous_step is not None:
+        #     obs,reward,done,info = previous_step
+        #     self.history.add(0, self.last_obs, info['self_act'] if 'self_act' in info else None, reward[0] if self.history.has_rew_done else None)
+        #     if done:
+        #         if self.args.self_obs_mode:
+        #             print("this is info type", torch.from_numpy(info['terminal_observation']).float())
+        #             self.history.add(0, torch.from_numpy(info['terminal_observation']).float(), None,0.0 if self.history.has_rew_done else None)
+        #         self.history.finish_episode(0)
+        # if previous_step is not None:
+        #     obs,reward,done,infos = previous_step
+        #     # print("we got here")
+        #     for i,info in enumerate(infos):
+        #         if self.update_history:
+        #                 if self.args.self_obs_mode:
+        #                     # print("self observations")
+        #                     if self.args.self_action_mode:
+        #                         # print("i come here")
+        #                         self.history.add(i, self.last_obs, action, reward[0] if self.history.has_rew_done else None)
+        #                     else:
+        #                         # print("i comehere")
+        #                         print("id",i)
+                                
+        #                 elif 'self_obs' in info:
+        #                     # print("opponent observations")
+        #                     eval_history.add(i, info['self_obs'], info['self_act'],
+        #                                     reward[i][0] if eval_history.has_rew_done else None)
+        #                 if done:
+        #                     if self.args.self_obs_mode:
+        #                         print(info['terminal_observation'])
+        #                         self.history.add(i, torch.from_numpy(info['terminal_observation']).float(), None,
+        #                                         0.0 if self.history.has_rew_done else None)
+        #                     self.history.finish_episode(i)
+        self.last_obs = observation
+        # print("action return", action)
+        # Convert action tensor back to int for environment compatibility
+        return int(action.item())
+    def update_opp_history(self, step_data, info):
+        if step_data is not None:
+            reward = step_data.reward
+            done = step_data.done
+            
+            # Use base observation (73 dims) - storage will augment with meta+reward+done
+            obs_to_store = self.last_obs.squeeze(0) if self.last_obs.dim() > 1 else self.last_obs
+            
+            # Convert reward to tensor for history storage
+            if self.history.has_rew_done:
+                reward_val = reward[0] if hasattr(reward, '__getitem__') else reward
+                reward_tensor = torch.tensor(reward_val, dtype=torch.float32).to(self.device)
+            else:
+                reward_tensor = None
+            
+            # Add to history - pass partner action as action parameter (not in obs)
+            partner_action = info.get('self_act', 0)
+            self.history.add(0, obs_to_store, partner_action, reward_tensor)
+            
+            if done:
+                if self.self_obs_mode:
+                    print(info['termination_info'])
+                    # For terminal observation, use NOOP (action 0) as partner action
+                    terminal_action_onehot = torch.zeros(num_actions, device=self.device)
+                    terminal_action_onehot[0] = 1.0
+                    terminal_obs_with_action = torch.cat([obs_to_store, terminal_action_onehot], dim=-1)
+                    terminal_reward = torch.tensor(0.0, dtype=torch.float32).to(self.device) if self.history.has_rew_done else None
+                    self.history.add(0, terminal_obs_with_action, None, terminal_reward)
+                self.history.finish_episode(0)
     def reset(self):
-        if self.actor is None:
-            # One-time initialization
-            policy = torch.load(self.model_path, map_location=self.device)
-            if policy.is_recurrent:
-                self.rnn_hidden_dim = policy.rnn_hidden_dim
-                self.rnn_states = torch.zeros(self.batch_size, self.rnn_hidden_dim, device=self.device)
-            if not hasattr(self.actor, 'rnn'):
-                self.actor.rnn = None
-
-        if self.rnn_states is not None:
-            self.rnn_states.zero_()
-  
-
+        self.policy = self.load(self.model_path)   
+        if self.policy.is_recurrent:
+             self.rnn_states = torch.zeros(self.num_eval_policies, self.policy.rnn_hidden_dim * (1 if self.policy.share_actor_critic else 2)).to(self.device)
+        else:
+            self.rnn_states = None   
+        self.masks = torch.zeros(self.num_eval_policies, 1).to(self.device)
+        if self.latent_training:
+            self.history = PeriodicHistoryStorage(
+                num_processes=self.num_test_policies,
+                num_policies=self.num_test_policies,
+                history_storage_size=self.history_size,
+                clear_period=self.history_size,
+                refresh_interval=1,
+                sample_size=None,
+                has_rew_done=self.has_rew_done,
+                max_samples_per_period=None,
+                step_mode=False,
+                use_episodes=True,
+                has_meta_time_step=self.has_meta_time_step,
+                include_current_episode=self.include_current_episode,
+                obs_shape=(76,),  # 73 base + 3 storage augmentation (meta+rew+done)
+                act_shape=tuple(),
+                max_episode_length=40,
+                merge_encoder_computation=self.merge_encoder_computation,
+                last_episode_only=self.last_episode_only,
+                pop_oldest_episode=self.pop_oldest_episode,
+            )
+            self.history.to(self.device)
+        else:
+            self.history = None
+            
 class RuleBasedPolicy:
     def __init__(self, policy_type, nav_p, tar_p, rand_p, convention, env_name, support_set=None,
                  ingredient_support_set=None, event_probs=None):

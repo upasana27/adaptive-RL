@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+    <title>Main Study - Ready to Begin</title>
+
+    <script src="../static/lib/jquery-min.js"></script>
+    <script src="../static/js/bootstrap.min.js"></script>
+
+    <style>
+      body {
+        font-size: 16px;
+        line-height: 1.6;
+        background-color: #f8f9fa;
+        padding: 10px 0;
+      }
+
+      .container-main {
+        max-width: 900px;
+        background-color: white;
+        padding: 35px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 15px;
+        font-weight: bold;
+        color: #2c3e50;
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-top: 25px;
+        margin-bottom: 12px;
+      }
+
+      p {
+        color: #555;
+        margin-bottom: 15px;
+        font-size: 17px;
+        line-height: 1.8;
+      }
+
+      ul {
+        margin-left: 20px;
+        margin-bottom: 15px;
+      }
+
+      li {
+        margin-bottom: 10px;
+        color: #555;
+        font-size: 17px;
+        line-height: 1.7;
+      }
+
+      .highlight-box {
+        background-color: #d1ecf1;
+        border-left: 4px solid #0c5460;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+
+      .highlight-box p {
+        margin: 0;
+        color: #0c5460;
+        font-weight: bold;
+      }
+
+      .button-container {
+        text-align: center;
+        margin-top: 35px;
+        padding-top: 25px;
+        border-top: 2px solid #e9ecef;
+      }
+
+      .btn-next {
+        padding: 12px 50px;
+        font-size: 18px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container container-main">
+
+      <h1>Main Study Begins Now</h1>
+
+      <p>
+        You have completed the practice and trial rounds. You are now ready for the <strong>main study</strong>.
+      </p>
+
+      <div class="highlight-box">
+        <p>⭐ Important: You will receive payment based on your performance. For each salad you successfully deliver in a round, you earn points that contribute to your final compensation.</p>
+      </div>
+
+      <h2>What to Expect</h2>
+      <ul>
+        <li>You will play <strong>2 rounds</strong></li>
+        <li>Each round has <strong>5 episodes</strong> of 40 seconds each</li>
+        <li>Work with your AI partner to complete and deliver as many salads as possible</li>
+        <li>After each round, rate your experience on a brief questionnaire</li>
+        <li><strong>Your earnings depend on successful deliveries!</strong></li>
+      </ul>
+
+      <p style="margin-top: 25px;">
+        Ready? Click below to begin.
+      </p>
+
+      <div class="button-container">
+        <a href="{{ url_for('game') }}" class="btn btn-primary btn-next">Continue</a>
+      </div>
+
+    </div>
+  </body>
+</html>

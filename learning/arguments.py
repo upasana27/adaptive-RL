@@ -348,16 +348,6 @@ def get_args():
         help='make history_size, history_full_size and history_refresh_interval in episodes'
     )
     parser.add_argument(
-        '--opponent-switch-period-min', type=int
-    )
-    parser.add_argument(
-        '--opponent-switch-period-max', type=int
-    )
-    parser.add_argument(
-        '--opponent-switch-schedule', type=int
-    )
-
-    parser.add_argument(
         '--history-middle-sampling', action='store_true', help='allow samples ending in the middle of an episode'
     )
     parser.add_argument(
@@ -568,6 +558,15 @@ def get_args():
     )
     parser.add_argument(
         '--rule-based-opponents', type=int, default=0, help='number of rule-based opponents'
+    )
+    parser.add_argument(
+        '--opponent-switch-period-min', type=int, help='minimum period for opponent switching'
+    )
+    parser.add_argument(
+        '--opponent-switch-period-max', type=int, help='maximum period for opponent switching'
+    )
+    parser.add_argument(
+        '--opponent-switch-schedule', type=int, nargs='+', help='opponent switch schedule'
     )
     parser.add_argument(
         '--recipe-type', type=str, choices=['full', 'cross'], default='full', help='recipe type for Overcooked'

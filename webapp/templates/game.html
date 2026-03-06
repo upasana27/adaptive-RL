@@ -141,8 +141,8 @@
         <div class="instructions-section">
             {% if is_trial %}
             <h3>Available Recipes</h3>
-            <div style="background-color: #fff3cd; padding: 15px; border-radius: 4px; border-left: 3px solid #ffc107; margin-bottom: 15px;">
-                <p style="margin: 0; font-weight: bold; color: #856404;">Deliver these salads to earn points:</p>
+            <div style="background-color: #e7f3ff; padding: 15px; border-radius: 4px; border-left: 3px solid #007bff; margin-bottom: 15px;">
+                <p style="margin: 0; font-weight: bold; color: #0056b3;">Deliver these salads to earn points:</p>
             </div>
             <ul style="line-height: 1.8;">
                 <li><strong>Lettuce + Onion</strong> Salad</li>
@@ -150,6 +150,16 @@
                 <li><strong>Tomato + Carrot</strong> Salad</li>
             </ul>
             {% else %}
+            <h3>Available Recipes</h3>
+            <div style="background-color: #e7f3ff; padding: 15px; border-radius: 4px; border-left: 3px solid #007bff; margin-bottom: 15px;">
+                <p style="margin: 0; font-weight: bold; color: #0056b3;">Deliver these salads to earn points:</p>
+            </div>
+            <ul style="line-height: 1.8;">
+                <li><strong>Lettuce + Onion</strong> Salad</li>
+                <li><strong>Potato + Broccoli</strong> Salad</li>
+                <li><strong>Tomato + Carrot</strong> Salad</li>
+            </ul>
+
             <h3>Controls</h3>
             <div class="controls-box">
                 <p>↑ ↓ ← → : Move</p>
@@ -160,7 +170,7 @@
             <ul>
                 <li><strong>1. Pick up ingredient</strong>
                     <ul>
-                        <li>Go to ingredient station on your side</li>
+                        <li>Go to an ingredient station</li>
                         <li>Face ingredient and press Spacebar</li>
                     </ul>
                 </li>
@@ -179,8 +189,8 @@
                 </li>
                 <li><strong>4. Deliver the dish</strong>
                     <ul>
-                        <li>Right-side agent picks up completed dish</li>
-                        <li>Deliver to serving station to finish</li>
+                        <li>Pick up the completed dish</li>
+                        <li>Deliver to serving station to earn points</li>
                     </ul>
                 </li>
             </ul>
@@ -196,13 +206,9 @@
         const LEVEL_ID = "{{ level_id }}";
         const IS_DEMO = false;
         const EPISODES_TOTAL = {{ total_episodes }};
+        const ROUND_TYPE = "{{ round_type }}";  // 'practice', 'trial', or 'main'
+        const ROUND_IDX = {{ round_idx|default(0) }};  // Index in round sequence
         let currentEpisode = {{ episode_num }};
-        
-        // Update episode counter when episode ends
-        window.addEventListener('episode_end', function() {
-            currentEpisode++;
-            document.getElementById('episode-counter').textContent = currentEpisode;
-        });
     </script>
     <script src="/static/js/game.js"></script>
 </body>

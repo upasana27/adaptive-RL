@@ -196,10 +196,10 @@
             <strong>For each recipe:</strong>
           </p>
           <ul>
-            <li>Each agent picks up a raw ingredient available to them.</li>
+            <li>Each agent picks up a raw ingredient.</li>
             <li>The ingredient must be chopped.</li>
-            <li>Chopped ingredients are placed on a plate.</li>
-            <li>The completed plate must be picked up and delivered to finish the recipe</li>
+            <li>Chopped ingredients are placed on a plate in the center.</li>
+            <li>Pick up the completed plate and deliver it to earn points.</li>
           </ul>
         </div>
 
@@ -230,17 +230,22 @@
          </div>
 
         <div class="section">
-          <h2>Rounds and Episodes</h2>
-          <p>The task is organized into <strong>multiple rounds</strong>:</p>
+          <h2>Study Structure</h2>
+          <p><strong>Round vs Episode:</strong></p>
           <ul>
-            <li><strong>Each round</strong> consists of <strong>5 episodes</strong></li>
-            <li><strong>Each episode</strong> lasts <strong>40 seconds</strong></li>
-            <li>In each episode, your goal is to <strong>successfully deliver the salad within 40 seconds</strong></li>
+            <li><strong>Round</strong> = a block of 5 episodes with an AI partner</li>
+            <li><strong>Episode</strong> = a single 40-second game session</li>
           </ul>
-          <p style="margin-top: 20px;"><strong>Scoring:</strong></p>
+          <p style="margin-top: 15px;"><strong>The study consists of:</strong></p>
+          <ul>
+            <li><strong>1 Practice round</strong> (1 episode) - get familiar with controls</li>
+            <li><strong>2 Trial rounds</strong> (5 episodes each) - practice with AI partners</li>
+            <li><strong>4 Main rounds</strong> (5 episodes each) - the actual study with questionnaire after each round</li>
+          </ul>
+          <p style="margin-top: 15px;"><strong>Scoring:</strong></p>
           <ul>
             <li>Your score is based on <strong>completed deliveries</strong></li>
-            <li>The <strong>round number</strong>, <strong>episode number</strong>, and <strong>timer</strong> are displayed at the top of the game</li>
+            <li>The <strong>episode number</strong> and <strong>timer</strong> are displayed during gameplay</li>
           </ul>
         </div>
       </div>
@@ -249,7 +254,7 @@
         <p style="font-size: 18px; color: #333; margin-bottom: 20px;">
           Ready to practice? Click the button below to start the practice round.
         </p>
-        <a href="{{ url_for('demo') }}" class="btn btn-primary btn-next">Next - Start Practice Round</a>
+        <a href="{{ url_for('demo') }}" class="btn btn-primary btn-next">Continue to Practice</a>
       </div>
     </div>
   </body>

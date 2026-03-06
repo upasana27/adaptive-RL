@@ -143,13 +143,14 @@ class InteractionLogger:
         with open(tlx_path, 'a', newline='') as f:
             fieldnames = ['participant_id', 'round_idx', 'timestamp', 
                          'mental_demand', 'physical_demand', 'temporal_demand',
-                         'performance', 'effort', 'frustration']
+                         'performance', 'effort', 'frustration',
+                         'partner_proactive', 'partner_adaptive']
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             if is_new:
                 writer.writeheader()
             writer.writerow(tlx_row)
     
-    def log_participant_info(self, participant_id, alias, age, education):
+    def log_participant_info(self, participant_id, alias, age, education, overcooked_experience=''):
         """Log participant demographic information."""
         info_path = self.log_dir / f"{participant_id}_participant_info.json"
         
@@ -158,6 +159,7 @@ class InteractionLogger:
             'alias': alias,
             'age': age,
             'education': education,
+            'overcooked_experience': overcooked_experience,
             'timestamp': datetime.now().isoformat()
         }
         
@@ -307,7 +309,8 @@ class InteractionLogger:
             'duration_seconds': trajectory_data['round_info']['duration_seconds']
         }
     
-    def save_participant_summary(self, participant_id, alias_hash, age, education, rounds, questionnaires=None):
+    def save_participant_summary(self, participant_id, alias_hash, age, education, rounds, 
+                                questionnaires=None, overcooked_experience='', remuneration=None):
         """Save final participant summary with inputs only (demographics + questionnaire responses)."""
         participant_dir = self.log_dir / participant_id
         participant_dir.mkdir(parents=True, exist_ok=True)
@@ -317,10 +320,12 @@ class InteractionLogger:
             'alias_hash': alias_hash,
             'demographics': {
                 'age': age,
-                'education': education
+                'education': education,
+                'overcooked_experience': overcooked_experience
             },
             'rounds': rounds,  # List of round info: round_num, round_name, model_id, pkl_file
             'questionnaires': questionnaires or [],  # List of NASA TLX responses per round
+            'remuneration': remuneration or {},  # Remuneration calculation
             'timestamp': datetime.now().isoformat()
         }
         

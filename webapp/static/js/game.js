@@ -89,13 +89,15 @@
         connected = true;
         setStatus('Connected', 'connected');
         
-        // Join session
+        // Join session with round_type for correct player positions
         const payload = {
             participant_id: PARTICIPANT_ID || null,
             level: LEVEL_ID || 'demo',
             model: MODEL_ID || null,
             demo: IS_DEMO || false,
-            total_episodes: EPISODES_TOTAL || 1
+            total_episodes: EPISODES_TOTAL || 1,
+            round_type: (typeof ROUND_TYPE !== 'undefined') ? ROUND_TYPE : 'main',
+            round_idx: (typeof ROUND_IDX !== 'undefined') ? ROUND_IDX : 0
         };
         
         socket.emit('join_session', payload);
@@ -152,9 +154,10 @@
         
         setStatus(`Episode ${episodeNum}/${totalEpisodes} complete! Starting next episode...`, 'connected');
         
-        // Update episode counter
+        // Update episode counter using server-authoritative episode number
+        // Server sends episode=N for just-completed episode, so next is N+1
         if (typeof currentEpisode !== 'undefined') {
-            currentEpisode++;
+            currentEpisode = episodeNum + 1;
             if (document.getElementById('episode-counter')) {
                 document.getElementById('episode-counter').textContent = currentEpisode;
             }
@@ -252,6 +255,7 @@
             } else if (remaining === 0) {
                 timerEl.style.color = '#ff0000';
                 timerEl.textContent = 'TIME UP!';
+                showTimeUpOverlay();
             }
         }, 100); // Update more frequently (10Hz) for smoother countdown
     }
@@ -260,6 +264,55 @@
         if (timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
+        }
+        hideTimeUpOverlay();
+    }
+
+    function showTimeUpOverlay() {
+        // Only show once per episode
+        if (document.getElementById('timeup-banner')) return;
+        
+        // Create a simple banner at the top that blinks 3 times
+        const banner = document.createElement('div');
+        banner.id = 'timeup-banner';
+        banner.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff0000 100%);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 9999;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);
+        `;
+        banner.innerHTML = '⏰ TIME UP! - Episode ending...';
+        
+        document.body.appendChild(banner);
+        
+        // Blink 3 times then auto-hide
+        let blinkCount = 0;
+        const blinkInterval = setInterval(() => {
+            banner.style.opacity = banner.style.opacity === '0' ? '1' : '0';
+            blinkCount++;
+            if (blinkCount >= 6) { // 3 full blinks (on-off-on-off-on-off)
+                clearInterval(blinkInterval);
+                banner.style.opacity = '1';
+                // Auto-hide after 1 second
+                setTimeout(() => {
+                    if (banner.parentNode) banner.remove();
+                }, 1000);
+            }
+        }, 200);
+    }
+
+    function hideTimeUpOverlay() {
+        const banner = document.getElementById('timeup-banner');
+        if (banner) {
+            banner.remove();
         }
     }
 

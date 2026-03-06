@@ -61,6 +61,17 @@ def discover_models(logs_root: Optional[Path] = None) -> Dict[str, Path]:
         if ckpt:
             model_id = child.name
             models[model_id] = ckpt
+    
+    # Explicitly add L2_left_big and pace_baseline models if they exist
+    # L2_left_big now uses the ppo_L2_left_mixed_seed1 model
+    l2_left_big_path = logs_root / 'ppo_L2_left_mixed_seed1' / 'ppo' / 'latest.pt'
+    if l2_left_big_path.exists():
+        models['L2_left_big'] = l2_left_big_path
+    
+    pace_baseline_path = logs_root / 'L2_left_agents' / 'baselines' / 'PACE' / 'ppo' / 'latest.pt'
+    if pace_baseline_path.exists():
+        models['pace_baseline'] = pace_baseline_path
+    
     return models
 
 
@@ -123,6 +134,9 @@ class ModelPolicy:
             self._note = f'loaded PACE model from {self.checkpoint_path.name}'
             print(f"✓ Loaded model: {self.model_id} (PretrainedPolicy_test with LatentPolicy)")
             
+            # Initialize history storage (must happen after model is loaded)
+            self._init_history_storage()
+            
         except Exception as e:
             print(f"⚠ Failed to load model {self.model_id}: {e}")
             import traceback
@@ -160,7 +174,7 @@ class ModelPolicy:
                 include_current_episode=True,
                 obs_shape=(73,),  # 71 base + 2 agent ID
                 act_shape=tuple(),
-                max_episode_length=40,
+                max_episode_length=500,  # Webapp episodes are ~400 steps (40s at ~10Hz), not 40 steps like training
                 merge_encoder_computation=True,
                 last_episode_only=False,
                 pop_oldest_episode=True,
@@ -168,9 +182,11 @@ class ModelPolicy:
             self.history.to(self.device)
             
             # Initialize RNN states and masks exactly as in policy.py lines 64-69
-            if hasattr(self.model, 'is_recurrent') and self.model.is_recurrent:
-                rnn_dim = self.model.rnn_hidden_dim
-                num_states = 1 if self.model.share_actor_critic else 2
+            # self.model is PretrainedPolicy_test; self.model.policy is the LatentPolicy
+            latent_policy = self.model.policy
+            if hasattr(latent_policy, 'is_recurrent') and latent_policy.is_recurrent:
+                rnn_dim = latent_policy.rnn_hidden_dim
+                num_states = 1 if latent_policy.share_actor_critic else 2
                 self.rnn_states = torch.zeros(self.num_eval_policies, rnn_dim * num_states).to(self.device)
             else:
                 self.rnn_states = None
@@ -239,11 +255,11 @@ class ModelPolicy:
             # IMPORTANT: Model was trained with --self-obs-mode which adds agent ID (2-d one-hot)
             # Current obs is 71-d, need to pad to 73-d
             if obs.shape[0] == 71:
-                # Add 2-d one-hot for agent ID
-                # AI partner is agent 1 (second agent), so one-hot is [0, 1]
-                agent_id = np.array([0.0, 1.0], dtype=np.float32)  # Agent 1 (AI partner)
-                obs = np.concatenate([obs, agent_id])
-                print(f"🔍 Padded obs from {71} to {obs.shape[0]} dimensions for agent 1")
+                # Add 2-d one-hot for agent ID based on actual player position
+                aid = getattr(self, 'agent_id', 0)  # Default to player_0 (LEFT) for main rounds
+                agent_id_onehot = np.zeros(2, dtype=np.float32)
+                agent_id_onehot[aid] = 1.0
+                obs = np.concatenate([obs, agent_id_onehot])
             
             # Convert to tensor
             obs_tensor = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
@@ -255,8 +271,9 @@ class ModelPolicy:
                     indices = self.history.get_all_current_indices()
                     history = (self.history, (all_agent_indices,) + indices)
                     
-                    # Call model.act with history (matching policy.py line 113)
-                    _, action, action_log_prob, self.rnn_states = self.model.act(
+                    # Call LatentPolicy.act with history (matching policy.py line 113)
+                    # self.model is PretrainedPolicy_test; self.model.policy is the LatentPolicy
+                    _, action, action_log_prob, self.rnn_states = self.model.policy.act(
                         obs_tensor,
                         self.rnn_states,
                         self.masks,
@@ -284,6 +301,36 @@ class ModelPolicy:
             traceback.print_exc()
             import numpy as np
             return np.random.randint(0, 6)
+
+    def set_id(self, agent_id):
+        """Set the agent ID (0 or 1) for correct observation padding."""
+        self.agent_id = agent_id
+        print(f"🔧 Set agent_id={agent_id} for {self.model_id}")
+
+    def update_opp_history(self, step_data, info):
+        """Update history buffer after each step - matching PretrainedPolicy_test.update_opp_history."""
+        if self.history is None or self.last_obs is None:
+            return
+        
+        try:
+            import torch
+            reward = step_data.reward
+            done = step_data.done
+            
+            # Use the stored observation (already a tensor)
+            obs_to_store = self.last_obs.squeeze(0) if self.last_obs.dim() > 1 else self.last_obs
+            
+            # has_rew_done=False, so reward_tensor is None
+            reward_tensor = None
+            
+            # Add to history - pass partner (human) action
+            partner_action = info.get('self_act', 0)
+            self.history.add(0, obs_to_store, partner_action, reward_tensor)
+            
+            if done:
+                self.history.finish_episode(0)
+        except Exception as e:
+            print(f"⚠ Error updating history for {self.model_id}: {e}")
 
     def info(self):
         return {'model_id': self.model_id, 'checkpoint': str(self.checkpoint_path) if self.checkpoint_path else None, 'loaded': self.loaded, 'note': self._note}

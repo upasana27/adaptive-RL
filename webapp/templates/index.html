@@ -186,11 +186,9 @@
       <!-- Consent & Start Form -->
       <form action="/start" method="POST" class="form-section">
         <h3>Ready to Participate?</h3>
-        
-        <div class="form-group">
-          <label for="alias">Please enter a nickname or alias:</label>
-          <input type="text" id="alias" name="alias" required placeholder="e.g., Player123" autocomplete="off">
-        </div>
+        <input type="hidden" name="prolific_pid" value="{{ prolific_pid }}">
+        <input type="hidden" name="study_id" value="{{ study_id }}">
+        <input type="hidden" name="session_id" value="{{ session_id }}">
 
         <div class="consent-section">
           <label>

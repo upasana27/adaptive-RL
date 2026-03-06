@@ -122,9 +122,13 @@ class PolicyAdapter:
         if hasattr(self.policy, 'act'):
             return self.policy.act(obs)
         elif callable(self.policy):
+            # Check if this is a PretrainedPolicy_test (uses __call__ with observation)
+            if hasattr(self.policy, 'model_path'):
+                # This is PretrainedPolicy_test - pass observation directly
+                return self.policy(obs)
             # For rule-based policies that use __call__(world)
             # We need the world object, not obs
-            if self.world is not None:
+            elif self.world is not None:
                 return self.policy(self.world)
             else:
                 # Fallback to random
@@ -241,12 +245,16 @@ class EnvManager:
         self._counter += 1
         return f'env-{int(time.time())}-{self._counter}'
 
-    def create_env_for_session(self, session_id: str, level: Optional[str] = None, model: Optional[str] = None, demo: bool = True):
+    def create_env_for_session(self, session_id: str, level: Optional[str] = None, model: Optional[str] = None, demo: bool = True, round_type: str = 'main'):
         """Create an environment and attach model policy (if available).
 
         - For demo=True or if import fails: uses MockEnv
         - For demo=False: creates real Overcooked environment with AI partner
         - AI partner is random by default, or trained model if `model` provided
+        
+        Player positions depend on round_type:
+        - 'practice' or 'trial': Human on LEFT (player_0), AI on RIGHT (player_1)
+        - 'main': Human on RIGHT (player_1), AI on LEFT (player_0)
         """
         env = None
         ai_policy = None
@@ -315,13 +323,29 @@ class EnvManager:
                     # Use AEC environment directly (don't convert to parallel)
                     # Wrap in our custom interface that handles multi-agent coordination
                     class AECOvercookedWrapper:
-                        def __init__(self, aec_env, graphics, ai_policy):
+                        def __init__(self, aec_env, graphics, ai_policy, round_type='main'):
                             self._env = aec_env
                             self.graphic_pipeline = graphics
                             self.ai_policy = ai_policy
                             self.players = list(aec_env.possible_agents)
-                            self.human_player = self.players[0]  # player_0
-                            self.ai_player = self.players[1]  # player_1
+                            self.round_type = round_type
+                            
+                            # Player positions depend on round type:
+                            # - Practice/Trial: Human on LEFT (player_0), AI on RIGHT (player_1)
+                            # - Main: Human on RIGHT (player_1), AI on LEFT (player_0)
+                            if round_type in ('practice', 'trial'):
+                                self.human_player = self.players[0]  # player_0 = LEFT side
+                                self.ai_player = self.players[1]  # player_1 = RIGHT side
+                                self.human_side = 'left'
+                                self.ai_side = 'right'
+                                print(f"[ENV] Trial/Practice mode: Human=LEFT (player_0), AI=RIGHT (player_1)")
+                            else:  # 'main'
+                                self.human_player = self.players[1]  # player_1 = RIGHT side
+                                self.ai_player = self.players[0]  # player_0 = LEFT side
+                                self.human_side = 'right'
+                                self.ai_side = 'left'
+                                print(f"[ENV] Main round mode: Human=RIGHT (player_1), AI=LEFT (player_0)")
+                            
                             self.episode_start_time = None
                             self.time_limit_seconds = 40  # 40 seconds per episode
                             self.steps_taken = 0
@@ -347,7 +371,10 @@ class EnvManager:
                             return self._env.observe(self.human_player)
                         
                         def step(self, human_action):
-                            """Step BOTH agents together - collect human action, get AI action, execute both simultaneously."""
+                            """Step BOTH agents together. Order depends on round_type:
+                            - Trial/Practice: Human (LEFT/player_0) first, AI (RIGHT/player_1) second
+                            - Main: AI (LEFT/player_0) first, Human (RIGHT/player_1) second
+                            """
                             import time as time_module
                             
                             self.steps_taken += 1
@@ -363,20 +390,35 @@ class EnvManager:
                             if isinstance(self.ai_policy, PolicyAdapter):
                                 self.ai_policy.set_world(self._env.unwrapped.world if hasattr(self._env, 'unwrapped') else getattr(self._env, 'world', None))
                             
-                            # Get current agent whose turn it is (should be human first)
+                            # AEC processes agents in order: player_0 first, then player_1
+                            # The positions depend on round_type (set in __init__)
                             agent = self._env.agent_selection
                             
-                            # Step human first
-                            if agent == self.human_player:
-                                self._env.step(human_action)
+                            if self.round_type in ('practice', 'trial'):
+                                # Human is player_0 (LEFT), AI is player_1 (RIGHT)
+                                # Human acts first
+                                if agent == self.human_player:
+                                    self._env.step(human_action)
+                                else:
+                                    self._env.step(0)  # NOOP if wrong turn
+                                
+                                # AI acts second
+                                ai_obs = self._env.observe(self.ai_player)
+                                ai_action_taken = self.ai_policy.act(ai_obs)
+                                self._env.step(ai_action_taken)
                             else:
-                                # If AI's turn somehow, just use NOOP for human
-                                self._env.step(0)
-                            
-                            # Now it's AI's turn - get AI action and step
-                            ai_obs = self._env.observe(self.ai_player)
-                            ai_action_taken = self.ai_policy.act(ai_obs)
-                            self._env.step(ai_action_taken)
+                                # Main rounds: AI is player_0 (LEFT), Human is player_1 (RIGHT)
+                                # AI acts first
+                                if agent == self.ai_player:
+                                    ai_obs = self._env.observe(self.ai_player)
+                                    ai_action_taken = self.ai_policy.act(ai_obs)
+                                    self._env.step(ai_action_taken)
+                                else:
+                                    ai_action_taken = 0
+                                    self._env.step(0)  # NOOP if wrong turn
+                                
+                                # Human acts second
+                                self._env.step(human_action)
                             
                             # Now both agents have stepped and the world has updated (accumulated_step ran)
                             
@@ -384,13 +426,15 @@ class EnvManager:
                             obs = self._env.observe(self.human_player)
                             reward = self._env.rewards.get(self.human_player, 0)
                             
-                            # Count recipes delivered for tracking
-                            if reward >= 10.0:
-                                self.recipes_delivered += 1
-                            
                             # Episode ends only on time limit or environment done flag
                             env_done = self._env.dones.get(self.human_player, False)
                             done = env_done or time_up
+                            
+                            # Count recipes delivered for tracking
+                            # env_done=True without time_up means a recipe was completed
+                            # (the env only terminates early on recipe completion)
+                            if env_done and not time_up:
+                                self.recipes_delivered += 1
                             
                             info = {
                                 'elapsed_time': time_module.time() - self.episode_start_time if self.episode_start_time else 0,
@@ -401,7 +445,12 @@ class EnvManager:
                                 'time_up': time_up,
                                 'ai_action': ai_action_taken,  # Log AI action for trajectory
                                 'human_action': human_action,   # Log human action for trajectory
-                                'self_act': human_action  # For PACE history tracking
+                                'human_side': self.human_side,  # Log which side human is on
+                                'ai_side': self.ai_side,        # Log which side AI is on
+                                'round_type': self.round_type,  # Log round type
+                                'self_act': human_action,  # For PACE history tracking
+                                'opponent_obs': self._env.observe(self.ai_player),  # AI's observation (for trajectory logging like evaluation_.py)
+                                'opponent_act': ai_action_taken  # AI's action (for trajectory logging like evaluation_.py)
                             }
                             if done:
                                 info['terminal_observation'] = obs
@@ -448,8 +497,13 @@ class EnvManager:
                             return self._env.unwrapped.world if hasattr(self._env, 'unwrapped') else getattr(self._env, 'world', None)
                     
                     # Get AI policy (random or trained model) BEFORE creating wrapper
+                    # AI position depends on round_type:
+                    # - Practice/Trial: AI on RIGHT (player_1)
+                    # - Main: AI on LEFT (player_0)
+                    ai_player_id = 1 if round_type in ('practice', 'trial') else 0
+                    
                     if model:
-                        # Handle rule-based policies
+                        # Handle rule-based policies (used in trial rounds)
                         if model.startswith('rule_based'):
                             try:
                                 # Import rule-based policy - ensure proper path setup
@@ -474,66 +528,44 @@ class EnvManager:
                                     ai_policy = RuleBasedPolicy('full', 0.5, 0.0, 0.0, None, env_name,
                                                               ingredient_support_set=['Potato', 'Broccoli'])
                                 
-                                ai_policy.set_id(1)  # AI is player_1
+                                ai_policy.set_id(ai_player_id)
                                 ai_policy = PolicyAdapter(ai_policy)
-                                print(f"✓ Loaded rule-based policy: {model}")
+                                print(f"✓ Loaded rule-based policy: {model} (AI is player_{ai_player_id})")
                             except Exception as e:
                                 print(f"⚠ Failed to load rule-based policy {model}: {e}")
                                 import traceback
                                 traceback.print_exc()
                                 ai_policy = RandomPolicy()
                                 print(f"✓ Using RandomPolicy instead")
-                        elif model.startswith('pace'):
-                            # Handle PACE trained models
-                            try:
-                                model_dir = Path(__file__).parent.parent / 'logs' / 'Overcooked' / 'ppo_L2_right_seed6' / 'ppo'
-                                model_path = model_dir / 'latest.pt'
-                                
-                                if not model_path.exists():
-                                    raise FileNotFoundError(f"PACE model not found: {model_path}")
-                                
-                                # Create PretrainedPolicy_test instance
-                                ai_policy = PretrainedPolicy_test(
-                                    latent_training=True,
-                                    history_size=3,
-                                    has_rew_done=True,
-                                    has_meta_time_step=False,
-                                    include_current_episode=False,
-                                    merge_encoder_computation=True,
-                                    last_episode_only=False,
-                                    pop_oldest_episode=False,
-                                    self_obs_mode=True,
-                                    model_path=str(model_path),
-                                    eval_history=True,
-                                    agent_id=1,
-                                    device='cuda' if torch.cuda.is_available() else 'cpu'
-                                )
-                                ai_policy.set_id(1)  # AI is player_1
-                                print(f"✓ Loaded PACE model: {model_path}")
-                            except Exception as e:
-                                print(f"⚠ Failed to load PACE model {model}: {e}")
-                                import traceback
-                                traceback.print_exc()
-                                ai_policy = RandomPolicy()
-                                print(f"✓ Using RandomPolicy instead")
                         else:
-                            # Handle trained models
+                            # Handle trained models (including L2_left_big, pace_baseline, ppo_pace_*, etc.)
+                            # All are loaded via the same REGISTRY mechanism
                             try:
                                 from webapp.models import REGISTRY
                                 ai_policy = REGISTRY.get_policy(model)
-                                print(f"✓ Loaded trained model: {model}")
+                                if ai_policy is not None:
+                                    # Set the agent ID so model uses correct one-hot encoding
+                                    if hasattr(ai_policy, 'set_id'):
+                                        ai_policy.set_id(ai_player_id)
+                                    print(f"✓ Loaded trained model via REGISTRY: {model} (AI is player_{ai_player_id})")
+                                else:
+                                    print(f"⚠ Model {model} not found in REGISTRY")
+                                    ai_policy = RandomPolicy()
+                                    print(f"✓ Using RandomPolicy instead")
                             except Exception as e:
                                 print(f"⚠ Failed to load model {model}: {e}")
+                                import traceback
+                                traceback.print_exc()
                                 ai_policy = RandomPolicy()
                                 print(f"✓ Using RandomPolicy instead")
                     else:
                         ai_policy = RandomPolicy()
                         print(f"✓ Using RandomPolicy for AI partner")
                     
-                    # Now create wrapper with initialized AI policy
+                    # Now create wrapper with initialized AI policy and round_type
                     # AECOvercookedWrapper already provides single-agent interface
-                    env = AECOvercookedWrapper(env_init, graphic_pipeline, ai_policy)
-                    print(f"✓ Created Overcooked environment: {config.get('mode')}")
+                    env = AECOvercookedWrapper(env_init, graphic_pipeline, ai_policy, round_type=round_type)
+                    print(f"✓ Created Overcooked environment: {config.get('mode')} (round_type={round_type})")
                 else:
                     print(f"⚠ Config not found: {config_path}")
                     env = None
@@ -614,7 +646,14 @@ class EnvManager:
                 im.save(buf, format='JPEG', quality=60, optimize=False, subsampling=2)
             b = buf.getvalue()
             b64 = base64.b64encode(b).decode('ascii')
-            info = {'step': state.step, 'model': state.model.info() if state.model else None}
+            # Handle models that may not have info() method (like PretrainedPolicy_test)
+            model_info = None
+            if state.model:
+                if hasattr(state.model, 'info'):
+                    model_info = state.model.info()
+                else:
+                    model_info = str(type(state.model).__name__)
+            info = {'step': state.step, 'model': model_info}
             return (b64, info)
 
     def reset(self, env_id: str):

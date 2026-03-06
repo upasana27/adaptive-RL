@@ -28,6 +28,26 @@ logs/
 data/
 wandb/
 
+# User study data (keep private)
+webapp/logs/
+webapp/data/
+webapp/server_output.txt
+webapp/analyze_study.py
+webapp/analyze_study_v2.py
+webapp/analyze_for_paper.py
+webapp/dropoff_analysis.py
+webapp/final_analysis.py
+webapp/honest_analysis.py
+webapp/paper_draft_user_study.tex
+webapp/monitor.py
+webapp/health_monitor.sh
+
+# Nohup output
+nohup*.out
+
+# Egg info
+*.egg-info/
+
 # OS
 .DS_Store
 Thumbs.db

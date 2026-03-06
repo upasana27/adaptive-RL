@@ -34,6 +34,7 @@ with open(CONFIG_PATH, 'r') as f:
 # Globals
 env_manager = EnvManager()
 active_sessions = {}  # session_id -> {participant_id, env, model, level, start_ts, ...}
+participant_round_success = {}  # participant_id -> {round_idx: bool} - tracks 100% success per round
 
 
 # === Helper Functions ===
@@ -48,8 +49,13 @@ def generate_round_sequence():
     - Practice: 1 episode (40s, random agent for controls)
     - 2 trial rounds with rule-based agents (5 episodes each, 40s or recipe completion) - NO questionnaire
     - Real game intro page
-    - 2 main rounds: 1 with L1 agent, 1 with L2 agent (5 episodes each) - questionnaire after EACH round
+    - 4 main rounds with L2_left agents - questionnaire after EACH round
+    
+    NOTE: Human plays on the RIGHT side, AI partner plays on the LEFT side.
+    Round = a block of episodes with one AI partner, followed by a questionnaire
+    Episode = a single 40-second game session within a round
     """
+    import random
     sequence = []
     
     # Practice round - 1 episode, 40 seconds, random agent (controls practice)
@@ -57,7 +63,7 @@ def generate_round_sequence():
         'type': 'practice',
         'model': None,
         'episodes': 1,
-        'round_name': 'Practice Round - Get Familiar with Controls',
+        'round_name': 'Practice - Get Familiar with Controls',
         'is_trial': False,
         'needs_questionnaire': False
     })
@@ -67,7 +73,7 @@ def generate_round_sequence():
         'type': 'trial',
         'model': 'rule_based_1',
         'episodes': 5,
-        'round_name': 'Trial Round 1',
+        'round_name': 'Trial Block 1 (5 episodes)',
         'is_trial': True,
         'needs_questionnaire': False
     })
@@ -75,21 +81,29 @@ def generate_round_sequence():
         'type': 'trial', 
         'model': 'rule_based_2',
         'episodes': 5,
-        'round_name': 'Trial Round 2',
+        'round_name': 'Trial Block 2 (5 episodes)',
         'is_trial': True,
         'needs_questionnaire': False
     })
     
-    # Main study round - 1 round with questionnaire
-    # Single round with L2 agent (ppo_L2_right_seed6)
-    sequence.append({
-        'type': 'main',
-        'model': 'ppo_L2_right_seed6',
-        'episodes': 5,
-        'round_name': 'Round 1',
-        'is_trial': False,
-        'needs_questionnaire': True
-    })
+    # 4 main rounds: first 2 with pace_baseline, last 2 with L2_left_big (mixed)
+    # Deterministic order for consistency
+    main_agents = [
+        ('pace_baseline', 'Round 1 (5 episodes)'),
+        ('pace_baseline', 'Round 2 (5 episodes)'),
+        ('L2_left_big', 'Round 3 (5 episodes)'),
+        ('L2_left_big', 'Round 4 (5 episodes)'),
+    ]
+    
+    for i, (model, name) in enumerate(main_agents, 1):
+        sequence.append({
+            'type': 'main',
+            'model': model,
+            'episodes': 5,
+            'round_name': f'Round {i} (5 episodes)',
+            'is_trial': False,
+            'needs_questionnaire': True
+        })
     
     return sequence
 
@@ -99,29 +113,43 @@ def generate_round_sequence():
 @app.route('/')
 def index():
     """Landing page with consent form."""
-    return render_template('index.html')
+    # Capture Prolific URL parameters
+    prolific_pid = request.args.get('PROLIFIC_PID', '')
+    study_id = request.args.get('STUDY_ID', '')
+    session_id = request.args.get('SESSION_ID', '')
+    return render_template('index.html',
+                          prolific_pid=prolific_pid,
+                          study_id=study_id,
+                          session_id=session_id)
 
 
 @app.route('/start', methods=['POST'])
 def start():
     """Process consent and start study."""
-    alias = request.form.get('alias', '').strip()
     consent = request.form.get('consent')
     
-    if not alias or not consent:
+    if not consent:
         return redirect(url_for('index'))
     
-    # Create session
-    participant_id = str(uuid.uuid4())
+    # Create session - use Prolific PID if available, otherwise generate UUID
+    prolific_pid = request.form.get('prolific_pid', '').strip()
+    if prolific_pid:
+        participant_id = prolific_pid
+    else:
+        participant_id = str(uuid.uuid4())
     session['participant_id'] = participant_id
-    session['alias'] = alias
-    session['alias_hash'] = hash_pseudonym(alias)
+    session['prolific_pid'] = prolific_pid
+    session['prolific_study_id'] = request.form.get('study_id', '').strip()
+    session['prolific_session_id'] = request.form.get('session_id', '').strip()
+    session['alias'] = participant_id[:8]
+    session['alias_hash'] = hash_pseudonym(participant_id[:8])
     session['round_sequence'] = generate_round_sequence()
     session['current_round_idx'] = 0
     session['current_episode_idx'] = 0  # Track episodes within a round
     session['start_time'] = time.time()
     session['completed_rounds'] = 0
     session['round_data'] = []  # Track round metadata for summary
+    session['round_success'] = {}  # Track success per main round for remuneration
     
     # Initialize trajectory logging
     LOGGER.init_trajectory(session_id=participant_id, participant_id=participant_id)
@@ -139,6 +167,7 @@ def questionnaire():
         # Store questionnaire responses
         age = request.form.get('age', '').strip()
         education = request.form.get('education', '').strip()
+        overcooked_experience = request.form.get('overcooked_experience', '').strip()
         
         if not age or not education:
             return redirect(url_for('questionnaire'))
@@ -146,19 +175,21 @@ def questionnaire():
         # Store in session
         session['age'] = age
         session['education'] = education
+        session['overcooked_experience'] = overcooked_experience
         
         # Also log to file for record keeping
         LOGGER.log_participant_info(
             participant_id=session['participant_id'],
             alias=session['alias'],
             age=age,
-            education=education
+            education=education,
+            overcooked_experience=overcooked_experience
         )
         
         return redirect(url_for('instructions'))
     
     # GET request - show questionnaire form
-    return render_template('questionnaire.html', alias=session.get('alias', ''))
+    return render_template('questionnaire.html')
 
 
 @app.route('/instructions')
@@ -273,6 +304,7 @@ def game():
     
     round_info = sequence[round_idx]
     episode_idx = session.get('current_episode_idx', 0)
+    round_type = round_info.get('type', 'main')  # 'practice', 'trial', or 'main'
     
     return render_template('game.html',
                           participant_id=session['participant_id'],
@@ -284,7 +316,9 @@ def game():
                           model_id=round_info['model'],
                           level_id=round_info.get('level', 'default'),
                           is_demo=False,
-                          is_trial=round_info.get('is_trial', False))
+                          is_trial=round_info.get('is_trial', False),
+                          round_type=round_type,
+                          round_idx=round_idx)
 
 
 @app.route('/thanks')
@@ -293,12 +327,73 @@ def thanks():
     if 'participant_id' not in session:
         return redirect(url_for('index'))
     
+    participant_id = session['participant_id']
     elapsed = time.time() - session.get('start_time', time.time())
     completed = session.get('completed_rounds', 0)
     
+    # Calculate remuneration
+    base_pay = 2.50
+    bonus_per_round = 2.50 / 4  # $0.625 per round
+    
+    # Get success data for main rounds only (round indices 3-6 in sequence)
+    round_success_data = participant_round_success.get(participant_id, {})
+    sequence = session.get('round_sequence', [])
+    
+    round_details = []
+    bonus_rounds = 0
+    for idx, r in enumerate(sequence):
+        if r.get('type') == 'main':
+            success_info = round_success_data.get(idx, {})
+            all_success = success_info.get('all_success', False)
+            episode_successes = success_info.get('episode_successes', [])
+            if all_success:
+                bonus_rounds += 1
+            round_details.append({
+                'round_name': r.get('round_name', f'Round {idx}'),
+                'model_id': r.get('model', ''),
+                'all_success': all_success,
+                'episode_successes': episode_successes,
+                'episodes_successful': sum(1 for s in episode_successes if s),
+                'episodes_total': len(episode_successes) if episode_successes else r.get('episodes', 5)
+            })
+    
+    total_bonus = bonus_rounds * bonus_per_round
+    total_pay = base_pay + total_bonus
+    
+    remuneration = {
+        'base_pay': base_pay,
+        'bonus_per_round': bonus_per_round,
+        'bonus_rounds': bonus_rounds,
+        'total_bonus': total_bonus,
+        'total_pay': round(total_pay, 2),
+        'round_details': round_details
+    }
+    
+    # Save remuneration to session for logging
+    session['remuneration'] = remuneration
+    
+    # Save/update participant summary with remuneration data
+    all_questionnaires = []
+    for round_data in session.get('round_data', []):
+        if 'questionnaire' in round_data:
+            all_questionnaires.append(round_data['questionnaire'])
+    
+    LOGGER.save_participant_summary(
+        participant_id=participant_id,
+        alias_hash=session.get('alias_hash', ''),
+        age=session.get('age', ''),
+        education=session.get('education', ''),
+        rounds=session.get('round_data', []),
+        questionnaires=all_questionnaires,
+        overcooked_experience=session.get('overcooked_experience', ''),
+        remuneration=remuneration
+    )
+    
     return render_template('thanks.html',
                           rounds_completed=completed,
-                          total_time=int(elapsed))
+                          total_time=int(elapsed),
+                          remuneration=remuneration,
+                          participant_id=participant_id)
 
 
 @app.route('/nasa_tlx')
@@ -335,6 +430,8 @@ def submit_nasa_tlx():
         'performance': request.form.get('performance'),
         'effort': request.form.get('effort'),
         'frustration': request.form.get('frustration'),
+        'partner_proactive': request.form.get('partner_proactive'),
+        'partner_adaptive': request.form.get('partner_adaptive'),
     }
     
     round_idx = session.get('current_round_idx', 0)
@@ -389,7 +486,9 @@ def submit_nasa_tlx():
             age=session.get('age', ''),
             education=session.get('education', ''),
             rounds=session.get('round_data', []),
-            questionnaires=all_questionnaires
+            questionnaires=all_questionnaires,
+            overcooked_experience=session.get('overcooked_experience', ''),
+            remuneration=session.get('remuneration', {})
         )
         return redirect(url_for('thanks'))
     
@@ -425,18 +524,20 @@ def handle_join(data):
     level = data.get('level', 'default')
     model_id = data.get('model')
     is_demo = data.get('demo', False)
+    round_type = data.get('round_type', 'main')  # 'practice', 'trial', or 'main'
     
     if not participant_id:
         emit('error', {'msg': 'Missing participant_id'})
         return
     
-    # Create environment
+    # Create environment with round_type for correct player positions
     try:
         env_id = env_manager.create_env_for_session(
             session_id=sid,
             level=level,
             model=model_id,
-            demo=is_demo
+            demo=is_demo,
+            round_type=round_type
         )
     except Exception as e:
         emit('error', {'msg': f'Failed to create env: {str(e)}'})
@@ -447,6 +548,8 @@ def handle_join(data):
         'env_id': env_id,
         'model_id': model_id,
         'level': level,
+        'round_type': round_type,  # 'practice', 'trial', or 'main'
+        'round_idx': data.get('round_idx', 0),  # Index in round sequence
         'start_ts': time.time(),
         'is_demo': is_demo,
         'step_count': 0,
@@ -578,6 +681,32 @@ def handle_join(data):
                         sess['episode_data']['actions'].append(action)
                         sess['episode_data']['partner_actions'].append(partner_action)
                         sess['episode_data']['rewards'].append(reward)
+                        
+                        # Log step to CSV with actual environment info
+                        LOGGER.log_step(
+                            session_id=sid,
+                            round_idx=sess.get('round_idx', 0),
+                            model_id=sess['model_id'],
+                            level=sess['level'],
+                            step=sess['step_count'],
+                            action=action,
+                            reward=reward,
+                            done=done,
+                            info=info,  # Now includes human_side, ai_side, round_type, ai_action, etc.
+                            client_ts=None
+                        )
+                        
+                        # Log step to trajectory (for PKL file) - similar to evaluation_.py pattern
+                        LOGGER.log_trajectory_step(
+                            session_id=participant_id,
+                            human_action=action,
+                            partner_action=partner_action,
+                            human_obs=obs,
+                            partner_obs=info.get('opponent_obs'),
+                            reward=reward,
+                            done=done,
+                            info=info
+                        )
                     
                     # DEBUG: Log timing every 60 steps (~6 seconds at 10Hz)
                     if step_count_for_timing % 60 == 0:
@@ -604,11 +733,26 @@ def handle_join(data):
                     wall_duration = time.time() - sess['start_ts']
                     env_elapsed = info.get('elapsed_time', 0)
                     termination_reason = info.get('termination_reason', 'unknown')
+                    recipes_delivered = info.get('recipes_delivered', 0)
+                    env_done = info.get('env_done', False)
+                    time_up = info.get('time_up', False)
+                    # A recipe is delivered if env ended naturally (not timeout)
+                    if env_done and not time_up:
+                        recipes_delivered = max(recipes_delivered, 1)
+                    episode_success = recipes_delivered > 0
+                    
+                    # Track episode success for this round
+                    if 'episode_successes' not in sess:
+                        sess['episode_successes'] = []
+                    sess['episode_successes'].append(episode_success)
+                    
                     summary = {
                         'steps': sess['step_count'],
                         'total_reward': sess['total_reward'],
                         'duration': wall_duration,
-                        'episode': sess['episode_num']
+                        'episode': sess['episode_num'],
+                        'recipes_delivered': recipes_delivered,
+                        'episode_success': episode_success
                     }
                     
                     # DEBUG: Log episode end with timing details
@@ -642,6 +786,22 @@ def handle_join(data):
                             session_id=participant_id,
                             participant_id=participant_id
                         )
+                        
+                        # Track round success for remuneration
+                        # A round has 100% success if ALL episodes delivered at least 1 recipe
+                        episode_successes = sess.get('episode_successes', [])
+                        round_all_success = len(episode_successes) > 0 and all(episode_successes)
+                        round_idx = sess.get('round_idx', 0)
+                        
+                        if participant_id not in participant_round_success:
+                            participant_round_success[participant_id] = {}
+                        participant_round_success[participant_id][round_idx] = {
+                            'all_success': round_all_success,
+                            'episode_successes': episode_successes,
+                            'model_id': sess.get('model_id', ''),
+                            'round_type': sess.get('round_type', '')
+                        }
+                        print(f"[ROUND_SUCCESS] participant={participant_id[:8]}, round_idx={round_idx}, all_success={round_all_success}, episodes={episode_successes}")
                         
                         socketio.emit('end_round', {'summary': summary}, to=sid)
                         LOGGER.end_session(sid, summary=summary)
@@ -699,20 +859,9 @@ def handle_action(data):
     active_sessions[sid]['last_action_id'] = action_id
     active_sessions[sid]['action_receive_time'] = server_receive_time
     
-    # Log to CSV
+    # Note: Detailed step logging with env info happens in the game loop after env.step()
+    # This is just acknowledging action receipt
     sess = active_sessions[sid]
-    LOGGER.log_step(
-        session_id=sid,
-        round_idx=0,  # TODO: Track round index properly
-        model_id=sess['model_id'],
-        level=sess['level'],
-        step=sess['step_count'],
-        action=action,
-        reward=0,  # Will be logged when step completes
-        done=False,  # Will be logged when step completes
-        info={},
-        client_ts=client_ts
-    )
 
 
 # === Admin Routes ===

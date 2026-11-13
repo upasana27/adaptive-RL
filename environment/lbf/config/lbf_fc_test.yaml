@@ -1,0 +1,11 @@
+name: lbf
+grid_size: 5
+horizon: 30
+num_agents: 2
+num_fruit_types: 3
+num_fruits_per_episode: 2
+present_types: null
+complete_reward: 10.0
+step_cost: 0.1
+align_reward: 0.0
+align_window: 5

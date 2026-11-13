@@ -123,10 +123,38 @@ def get_args():
         '--eval-episodes', type=int, help='number of episodes per evaluation'
     )
     parser.add_argument(
+        '--save-eval-trajectories',
+        action='store_true',
+        default=False,
+        help='save trajectories during training evaluations at each checkpoint')
+    parser.add_argument(
+        '--eval-trajectory-dir',
+        type=str,
+        default=None,
+        help='directory to save evaluation trajectories (default: <exp_name>/eval_trajectories)')
+    parser.add_argument(
+        '--dump-action-dist',
+        action='store_true',
+        default=False,
+        help='also dump per-step action probability distributions in saved trajectories (Phase 0 / D3)')
+    parser.add_argument(
         '--num-env-steps',
         type=int,
         default=10e6,
         help='number of environment steps to train (default: 10e6)')
+    parser.add_argument(
+        '--early-stop-sr',
+        type=float,
+        default=None,
+        help='if set, stop training when the eval success rate has been >= this value '
+             'for --early-stop-consecutive consecutive evaluations. Used by the L2 '
+             'curriculum to transition Phase 1 -> Phase 2 adaptively. Default: off.')
+    parser.add_argument(
+        '--early-stop-consecutive',
+        type=int,
+        default=5,
+        help='number of consecutive evals meeting --early-stop-sr before stopping '
+             '(default: 5)')
     parser.add_argument(
         '--env-name',
         default='PongNoFrameskip-v4',
@@ -348,12 +376,6 @@ def get_args():
         help='make history_size, history_full_size and history_refresh_interval in episodes'
     )
     parser.add_argument(
-        '--opponent-switch-period-min', type=int
-    )
-    parser.add_argument(
-        '--opponent-switch-period-max', type=int
-    )
-    parser.add_argument(
         '--history-middle-sampling', action='store_true', help='allow samples ending in the middle of an episode'
     )
     parser.add_argument(
@@ -481,6 +503,14 @@ def get_args():
         '--pretrained-policy-dir', type=str,
         help='directory of pretrained best responses, set to skip first stage training'
     )
+    parser.add_argument(
+        '--resume-from', type=str, default=None,
+        help='path to a saved policy checkpoint to resume training from'
+    )
+    parser.add_argument(
+        '--resume-steps', type=int, default=0,
+        help='number of env steps already completed in the resume checkpoint'
+    )
     # Self-play training
     parser.add_argument(
         '--multi-agent', type=int, default=1, help='train a self-play multi-agent policy'
@@ -554,7 +584,9 @@ def get_args():
         '--player-id', type=int, help='the player id of the trained agent'
     )
     parser.add_argument(
-        '--p', type=float, default=1.0, help='the probability upper bound for random action'
+        '--p', type=float, default=0.0, help='the probability upper bound for random action'
+        # 2026-07-30: default 1.0 -> 0.0. generate_policy_pool now honors p (was hard-coded
+        # deterministic); default 0.0 keeps scripts that omit --p on the old deterministic behavior.
     )
     parser.add_argument(
         '--desire-id', type=int, help='self-play desire id'
@@ -566,7 +598,131 @@ def get_args():
         '--rule-based-opponents', type=int, default=0, help='number of rule-based opponents'
     )
     parser.add_argument(
+        '--opponent-switch-period-min', type=int, help='minimum period for opponent switching'
+    )
+    parser.add_argument(
+        '--opponent-switch-period-max', type=int, help='maximum period for opponent switching'
+    )
+    parser.add_argument(
+        '--opponent-switch-schedule', type=int, nargs='+', help='opponent switch schedule'
+    )
+    parser.add_argument(
         '--recipe-type', type=str, choices=['full', 'cross'], default='full', help='recipe type for Overcooked'
+    )
+    parser.add_argument(
+        '--use-4ing-recipes', action='store_true', default=False,
+        help='Use 4-ingredient recipes (R1: LLOC, R2: LTOC, R3: LPOB, R4: TPCB)'
+    )
+    parser.add_argument(
+        '--use-l1-partners', action='store_true', default=False,
+        help='Use L1 pretrained agents as partners for L2 training'
+    )
+    parser.add_argument(
+        '--l1-train-seeds', type=str, default=None,
+        help='Comma-separated list of L1 seeds for training pool (e.g., "1,4" for simplified L2)'
+    )
+    parser.add_argument(
+        '--l1-eval-seeds', type=str, default=None,
+        help='Comma-separated list of L1 seeds for evaluation pool (e.g., "5" for simplified L2)'
+    )
+    parser.add_argument(
+        '--l1-p0', action='store_true',
+        help='Use L1 LEFT p=0 (deterministic) agents instead of p=0.25'
+    )
+    parser.add_argument(
+        '--l1-p025', action='store_true',
+        help='Use L1 agents from L1_right_p025 or L1_left_p025 folder'
+    )
+    parser.add_argument(
+        '--both-sides', action='store_true', default=False,
+        help='Train a side-agnostic agent: ego player-id alternates per env process '
+             '(even procs play side 0, odd procs side 1), so one policy learns BOTH sides. '
+             'Partners (e.g. rule-based L0s) are side-agnostic and take the opposite seat. '
+             'args.player_id is ignored for env seating when set. Eval envs alternate too.'
+    )
+    parser.add_argument(
+        '--l1-partner-ckpt', type=str, default='30000000.pt',
+        help='2026-10-20: checkpoint filename the --use-l1-partners custom-seed loader looks for under '
+             '{base}/seed{N}/ppo/. Default 30000000.pt (old behaviour). Use e.g. snapshot_20261020.pt '
+             'to train against a frozen copy of intermediate partner checkpoints.'
+    )
+    parser.add_argument(
+        '--l1-partner-base-dir', type=str, default=None,
+        help='Override base dir for the --use-l1-partners custom-seed pool (default: .../L1_agents/{side}). '
+             'Point at a per-method L1 pool so L2-M trains against its OWN L1 pool, e.g. '
+             '.../logs/Overcooked/june_new_exp/baselines_FC/right/LiAM . '
+             'Loader tries seed{N}/ then seed{N}_seed{N}/ under {base}/, expecting ppo/30000000.pt.'
+    )
+    parser.add_argument(
+        '--use-l1-specialized', action='store_true',
+        help='Use specialized L1 agents trained on recipe subsets'
+    )
+    parser.add_argument(
+        '--l1-specialized-train', type=str,
+        help='Specialized L1 train pool spec: "TYPE:seed1,seed2;TYPE:seed1,seed2" (e.g., "LO_PB:1,2,3;LO_TC:1,2,3;PB_TC:1,2,3")'
+    )
+    parser.add_argument(
+        '--l1-specialized-eval', type=str,
+        help='Specialized L1 eval pool spec: "TYPE:seed1,seed2;TYPE:seed1,seed2" (e.g., "LO_PB:4,5;LO_TC:4,5;PB_TC:4,5")'
+    )
+    parser.add_argument(
+        '--l1-specialized-base-dir', type=str, default=None,
+        help='Override base dir for the specialized L1 pool (default: .../ppo_L1_specialized). '
+             'e.g. .../logs/Overcooked/june_new_exp/L1_PC_p05_peerid/right for the peer-id pool. '
+             'Loader tries seed{N}/ then seed{N}_seed{N}/ under {base}/{TYPE}/.'
+    )
+    parser.add_argument(
+        '--l1-type-sampling', action='store_true',
+        help='Setting B: pool has 3 L1 type-slots + 3 L0 (6 total). Each type-slot samples uniformly from its seeds each episode.'
+    )
+    parser.add_argument(
+        '--use-curriculum', action='store_true',
+        help='Curriculum training: start L0-only, linearly ramp to L1-only. Requires --use-l1-specialized with --rule-based-opponents > 0.'
+    )
+    parser.add_argument(
+        '--curriculum-warmup-steps', type=int, default=5_000_000,
+        help='Steps of pure L0 training before L1 ramp begins (default: 5M).'
+    )
+    parser.add_argument(
+        '--curriculum-ramp-steps', type=int, default=25_000_000,
+        help='Steps over which L1 fraction ramps from 0 to 1 (default: 25M; pure L1 after warmup+ramp).'
+    )
+    # 6-recipe disjoint domain (Exp 2)
+    parser.add_argument(
+        '--recipe-domain', type=str, default='3recipe', choices=['3recipe', '6recipe', '6recipe_x4'],
+        help='Which recipe domain to use. Defaults to 3recipe (existing); 6recipe enables the disjoint-capability Exp 2 domain.'
+    )
+    parser.add_argument(
+        '--l0-pair-type', type=str, default=None, choices=['R1R2', 'R3R4', 'R5R6', 'ALL', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6',
+                                                             # 6recipe_x4 domain (2026-10-28): types A/B/C (2 recipes each) or single recipes
+                                                             'A', 'B', 'C', 'X4_A1', 'X4_A2', 'X4_B1', 'X4_B2', 'X4_C1', 'X4_C2'],
+        help='6-recipe L0 pool selector for L1 disjoint training. Each type maps to 2 L0s (one per recipe in the pair).'
+    )
+    parser.add_argument(
+        '--use-l1-disjoint', action='store_true',
+        help='6-recipe Exp 2: load disjoint-capability L1 partners (R1R2 / R3R4 / R5R6) for L2 training.'
+    )
+    parser.add_argument(
+        '--l1-disjoint-train', type=str,
+        help='Disjoint L1 train spec: "R1R2:seeds;R3R4:seeds;R5R6:seeds"'
+    )
+    parser.add_argument(
+        '--l1-disjoint-eval', type=str,
+        help='Disjoint L1 eval spec: "R1R2:seeds;R3R4:seeds;R5R6:seeds"'
+    )
+    parser.add_argument(
+        '--feed-partner-history', action='store_true',
+        help='2026-10-20: L1 partners (PretrainedPolicy_test) get their history filled during L2 training '
+             'exactly as in their own training (own obs + ego action, terminal obs at episode end, kept across '
+             'the 5-episode meta-episode). Default off = all earlier L2 runs (partner history never written). '
+             'Currently honored by the disjoint (FI) loader only.'
+    )
+    parser.add_argument(
+        '--l1-disjoint-base-dir', type=str, default=None,
+        help='Override base dir for the disjoint (6-recipe) L1 pool (default: .../ppo_L1_disjoint). '
+             'e.g. .../logs/Overcooked/june_new_exp/L1_FI_pace_p0/right for the Oct 2026 PACE FI pool. '
+             'Loader tries seed{N}/ then seed{N}_seed{N}/ under {base}/{TYPE}/, preferring '
+             'ppo/30000000.pt and falling back to ppo/latest.pt.'
     )
     parser.add_argument(
         '--visit-reward-type', type=str, choices=['step', 'episode', 'interaction'],
@@ -574,6 +730,25 @@ def get_args():
     )
     parser.add_argument(
         '--visit-reward-coef', type=float, help='visit reward coefficient for Overcooked'
+    )
+    # LBF env config (fully-cooperative typed-fruit Level-Based Foraging)
+    parser.add_argument(
+        '--lbf-num-fruit-types', type=int, default=3,
+        help='Total number of fruit types in the LBF env (must match the YAML config). '
+             'There is one L0 specialist per fruit type.'
+    )
+    parser.add_argument(
+        '--lbf-horizon', type=int, default=80,
+        help='Episode horizon for LBF; used to configure max_episode_length in L1 pretrained partner histories.'
+    )
+    parser.add_argument(
+        '--lbf-num-fruits-per-episode', type=int, default=3,
+        help='Number of fruits spawned per episode (must match YAML). Used to compute obs_shape for L1 partner histories.'
+    )
+    parser.add_argument(
+        '--lbf-l1-eval-spec', type=str, default=None,
+        help='Spec string (e.g. "L1_FC_h80:3") for L1 partners to ADD to the eval pool only. '
+             'Training pool is unchanged. Used to track baseline generalisation to L1 during L0 training.'
     )
     # Kuhn Poker env config
     parser.add_argument(

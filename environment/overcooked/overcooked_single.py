@@ -49,6 +49,11 @@ class Overcooked_SingleEnv(gym.Env):
     def set_id(self, id):
         self._id = id
         self.opponent.set_id(1 - self._id)
+        # Keep the env's L2 shaping/counters on the EGO seat (matters for --both-sides, where odd env
+        # processes seat the ego as player 1). No-op for envs without the attribute.
+        zoo = getattr(getattr(self.env, '_env', None), 'unwrapped', None)
+        if zoo is not None and hasattr(zoo, 'shaping_agent_idx'):
+            zoo.shaping_agent_idx = int(id)
 
     def reset(self):
         # reset self id and opponent id
@@ -86,6 +91,11 @@ class Overcooked_SingleEnv(gym.Env):
         info['opponent_obs'] = self.last_obs[f'player_{1 - self._id}']
         info['opponent_act'] = oppo_action
         self.last_obs = {k: v.obs for k, v in data.items()}
+        if getattr(self.opponent, 'feed_history', False):
+            # Opt-in (PretrainedPolicy_test feed_history=True): fill the partner's history like its training did.
+            done = data[f'player_{self._id}'].done
+            self.opponent.observe_step(action, done,
+                                       terminal_obs=self.last_obs[f'player_{1 - self._id}'] if done else None)
         data = data[f'player_{self._id}']
 
         if self.profiling:
@@ -98,7 +108,14 @@ class Overcooked_SingleEnv(gym.Env):
         print('Opponent inference time:', self.op_inf_time, 'Env time:', self.env_time)
 
     def get_oppo_action(self):
-        if (isinstance(self.opponent, RuleBasedPolicy)
+        # Unwrap wrapper policies (CurriculumPool, RandomizedTypePolicy, etc.)
+        # to check the actual active policy type, then call the outer wrapper
+        # with the right argument so internal routing is preserved.
+        active = self.opponent
+        while hasattr(active, '_active'):
+            active = active._active
+
+        if (isinstance(active, RuleBasedPolicy)
                 or (isinstance(self.opponent, DynamicPolicy)
                     and isinstance(self.opponent.policy.current_policies[0], RuleBasedPolicy))):
             world = self.env.get_env_world()

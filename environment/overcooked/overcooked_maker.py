@@ -9,19 +9,25 @@ from gym_cooking.environment import cooking_zoo
 from gym_cooking.environment.game.graphic_pipeline import GraphicPipeline
 from gym_cooking import Arrdict, Dotdict, arrdict
 from gym_cooking.wrappers import SARDConsistencyChecker
-from gym_cooking.environment.cooking_zoo import Ingred2ID
+from gym_cooking.environment.cooking_zoo import Ingred2ID, Ingred2ID_6recipe
 
 class OvercookedMaker:
     def __init__(self, *, mode, horizon, recipes, obs_spaces, obs_range=None, num_agents=2,
                  interact_reward=0.5, progress_reward=1.0, complete_reward=10.0,
-                 step_cost=0.1, display=False, **_):
+                 step_cost=0.1, display=False, recipe_domain='3recipe', board_placement_reward=0.0, board_chop_reward=0.0,
+                 plating_reward=0.0, plate_mixing='legacy', **_):
         if not isinstance(obs_spaces, list):
             obs_spaces = [obs_spaces]
-        default_desire = [1] * len(Ingred2ID)
+        active_ingred_2_id = Ingred2ID_6recipe if recipe_domain in ('6recipe', '6recipe_x4') else Ingred2ID
+        default_desire = [1] * len(active_ingred_2_id)
         self._env = cooking_zoo.parallel_env(level=mode, num_agents=num_agents, record=False,
                                         max_steps=horizon, recipes=recipes, desire=default_desire, obs_spaces=obs_spaces, obs_range=obs_range,
                                         interact_reward=interact_reward, progress_reward=progress_reward,
-                                        complete_reward=complete_reward, step_cost=step_cost)
+                                        complete_reward=complete_reward, step_cost=step_cost,
+                                        recipe_domain=recipe_domain,
+                                        board_placement_reward=board_placement_reward,
+                                        board_chop_reward=board_chop_reward,
+                                        plating_reward=plating_reward, plate_mixing=plate_mixing)
         self.name = mode
         self.horizon = horizon
         self.players = self._env.possible_agents

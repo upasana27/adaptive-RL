@@ -285,8 +285,59 @@ class PPO_:
                         aux_peer_obs_pred_loss=aux_peer_obs_pred_loss
                     )
 
-                # Auxiliary policy classifier removed
-                pass
+                # Peer-identifier (auxiliary policy classifier) loss — restored.
+                # Trains encoder to encode partner identity via CE against the true
+                # opponent index. Skipped when coef is None (off) or float('inf')
+                # (which historically flagged reward-only mode).
+                if self.aux_pol_cls_coef is not None and self.aux_pol_cls_coef != float('inf'):
+                    if self.encoder_mini_batch_size is None:
+                        # Use the RL mini-batch we already have.
+                        cls_preds = torch.split(
+                            self.actor_critic.aux_pol_cls_head(latents),
+                            self.indices_mapper.args.policy_id_max.tolist(),
+                            dim=-1,
+                        )
+                        opp_indices = self.indices_mapper.to_opponent_indices(agent_indices)
+
+                        if self.indices_mapper.args.shuffle_agents:
+                            cls_targets = permute_agent_ids(
+                                self.indices_mapper.args.policy_id_all,
+                                opp_indices, agent_perm_batch.T,
+                            )
+                        else:
+                            assert agent_perm_batch is None
+                            cls_targets = [policy_ids[opp_indices].to(latents.device)
+                                           for policy_ids in self.indices_mapper.args.policy_id_all]
+
+                        aux_pol_cls_loss = torch.stack([
+                            F.cross_entropy(cls_pred, cls_target, reduction='mean')
+                            for cls_pred, cls_target in zip(cls_preds, cls_targets)
+                        ]).mean()
+                        aux_pol_cls_acc = torch.stack([
+                            (cls_pred.argmax(dim=1) == cls_target).float().mean()
+                            for cls_pred, cls_target in zip(cls_preds, cls_targets)
+                        ]).mean()
+                        losses.update(aux_pol_cls_loss=aux_pol_cls_loss)
+                        infos.update(aux_pol_cls_acc=aux_pol_cls_acc)
+                    elif update_frequency is None or update_step % update_frequency == 0:
+                        # Sample a separate encoder mini-batch.
+                        aux_history_batch, aux_opp_idx_batch = rollouts.history.sample_data(
+                            self.encoder_mini_batch_size, sample_in_middle=self.history_middle_sampling
+                        )
+                        aux_pol_cls_loss, aux_pol_cls_correct = self.encoder_forward(
+                            aux_history_batch, aux_opp_idx_batch)
+                        aux_pol_cls_acc = aux_pol_cls_correct / self.encoder_mini_batch_size
+                        # Validation batch
+                        val_history_batch, val_opp_idx_batch = rollouts.history.sample_data(
+                            self.encoder_mini_batch_size, train=False)
+                        with torch.no_grad():
+                            val_pol_cls_loss, val_pol_cls_correct = self.encoder_forward(
+                                val_history_batch, val_opp_idx_batch)
+                            val_pol_cls_acc = val_pol_cls_correct / self.encoder_mini_batch_size
+                            infos.update(aux_pol_cls_val_loss=val_pol_cls_loss.item(),
+                                         aux_pol_cls_val_acc=val_pol_cls_acc)
+                        losses.update(aux_pol_cls_loss=aux_pol_cls_loss)
+                        infos.update(aux_pol_cls_acc=aux_pol_cls_acc)
 
                 if self.latent_training_mode:
                     losses.update(get_latent_losses(latents, params, agent_indices,

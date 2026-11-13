@@ -5,6 +5,7 @@ import os
 import time
 import wandb
 import random
+import collections
 from tqdm import trange
 import numpy as np
 from learning import utils, algo
@@ -69,8 +70,11 @@ def train_embedding(args, train_pool, eval_pool):
             envs.env_method('set_opponent',
                             train_pool[i] if i < num_train_opponents else deepcopy(train_pool[i % num_train_opponents]),
                             indices=i)
-            if args.env_name == 'Overcooked' or args.env_name == 'MPE':
-                envs.env_method('set_id', args.player_id, indices=i)
+            if args.env_name == 'Overcooked' or args.env_name == 'MPE' or args.env_name == 'LBF':
+                # --both-sides: alternate the ego seat across processes so one policy
+                # trains on BOTH sides (partner takes the opposite seat via set_id).
+                pid_i = (i % 2) if getattr(args, 'both_sides', False) else args.player_id
+                envs.env_method('set_id', pid_i, indices=i)
             if len(train_pool) == 1 and args.env_name == 'Overcooked' and not args.latent_training:
                 envs.env_method('set_desire', train_pool[0].ingredient_support_set_id, indices=i)
                 if i == 0:
@@ -93,8 +97,11 @@ def train_embedding(args, train_pool, eval_pool):
                                   always_use_dummy=args.use_dummy_vec_env, allow_early_resets=True)
         for i in range(num_eval_opponents):
             eval_envs.env_method('set_opponent', eval_pool[i], indices=i)
-            if args.env_name == 'Overcooked' or args.env_name == 'MPE':
-                eval_envs.env_method('set_id', args.player_id, indices=i)
+            if args.env_name == 'Overcooked' or args.env_name == 'MPE' or args.env_name == 'LBF':
+                # --both-sides: alternate eval seat too (NOTE: per-opponent eval metrics
+                # then mix sides; definitive per-side numbers come from post-hoc eval).
+                pid_i = (i % 2) if getattr(args, 'both_sides', False) else args.player_id
+                eval_envs.env_method('set_id', pid_i, indices=i)
         if use_history:
             eval_history = PeriodicHistoryStorage(
                 num_processes=num_eval_opponents,
@@ -252,6 +259,10 @@ def train_embedding(args, train_pool, eval_pool):
         print('Encoder loaded')
         for p in policy.encoder.parameters():
             p.requires_grad_(False)
+
+    if args.resume_from is not None:
+        print(f'Resuming from checkpoint: {args.resume_from} (step {args.resume_steps})')
+        policy = torch.load(args.resume_from, map_location=device)
 
     print('Policy constructed:', policy)
 
@@ -429,7 +440,9 @@ def train_embedding(args, train_pool, eval_pool):
     train_stats_by_opponent = {
         k: tuple(deque() for _ in range(num_train_opponents))
         for k in ['reward', 'success_rate', 'visits_per_interaction',
-                  'expl_reward_per_interaction', 'expl_reward_per_episode', 'expl_reward_per_step']
+                  'expl_reward_per_interaction', 'expl_reward_per_episode', 'expl_reward_per_step',
+                  # board-placement shaping diagnostics (cooking_zoo info; absent in other envs)
+                  'l2_board_placements', 'l2_chops', 'l2_retrievals', 'l2_platings', 'shaping_reward', 'env_return']
     }
 
     if args.collect_all:
@@ -455,7 +468,11 @@ def train_embedding(args, train_pool, eval_pool):
     else:
         use_br = soft_imitation_cur_prob = None
 
-    for j in range(num_updates):
+    j_start = args.resume_steps // (args.num_processes * args.num_steps) if args.resume_from else 0
+    early_stop_eval_srs = collections.deque(maxlen=args.early_stop_consecutive) \
+        if getattr(args, 'early_stop_sr', None) is not None else None
+    early_stop_triggered = False
+    for j in range(j_start, num_updates):
         start = time.time()
         if use_soft_imitation:
             ratio = min(1.0, j * args.num_steps * args.num_processes / args.soft_imitation_decay_steps)
@@ -504,8 +521,11 @@ def train_embedding(args, train_pool, eval_pool):
                             all_agent_indices, history, query_ind=args.collect_all
                         )
 
-                        # Auxiliary policy classifier removed
-                        policy_pred = None
+                        # Peer-identifier prediction — used for classifier reward
+                        if use_policy_cls_reward:
+                            policy_pred = policy.aux_pol_cls_head(policy.last_latents)
+                        else:
+                            policy_pred = None
 
                         if use_soft_imitation:
                             # Act with the best responses and compute importance sampling weights
@@ -591,10 +611,13 @@ def train_embedding(args, train_pool, eval_pool):
                         # Record episode results
                         if not (use_soft_imitation and use_br[i]):
                             train_stats_by_opponent['reward'][i % num_train_opponents].append(info['episode']['r'])
-                            if args.env_name == 'Overcooked':
+                            if args.env_name == 'Overcooked' or args.env_name == 'LBF':
                                 train_stats_by_opponent['success_rate'][i % num_train_opponents].append(
                                     info['termination_info'].endswith('completed')
                                 )
+                                if 'shaping_reward' in info:
+                                    for k in ('l2_board_placements', 'l2_chops', 'l2_retrievals', 'l2_platings', 'shaping_reward', 'env_return'):
+                                        train_stats_by_opponent[k][i % num_train_opponents].append(float(info.get(k, 0.0)))
 
                         # Record visit stats and exploration rewards
                         if use_history:
@@ -710,10 +733,18 @@ def train_embedding(args, train_pool, eval_pool):
             # import sys
             # print(args)
             # sys.exit()
-            evaluate(args, eval_pool, args.eval_episodes, eval_envs, eval_history, policy,
+            eval_info, _ = evaluate(args, eval_pool, args.eval_episodes, eval_envs, eval_history, policy,
                      j + phase * num_updates if args.wandb_user_name is not None else None,
                      use_latent=phase, update_history=True)
-            
+            if early_stop_eval_srs is not None and 'success_rate' in eval_info:
+                early_stop_eval_srs.append(float(eval_info['success_rate']))
+                if len(early_stop_eval_srs) == early_stop_eval_srs.maxlen \
+                        and min(early_stop_eval_srs) >= args.early_stop_sr:
+                    print(f'Early stop: eval success rate >= {args.early_stop_sr} for '
+                          f'{early_stop_eval_srs.maxlen} consecutive evals '
+                          f'(values: {list(early_stop_eval_srs)}). Stopping at step {total_num_steps}.')
+                    early_stop_triggered = True
+
         end = time.time()
         fps = args.num_steps * args.num_processes / (end - start)
         if episode_result_ready:
@@ -725,11 +756,21 @@ def train_embedding(args, train_pool, eval_pool):
                         sum(len(train_stats_by_opponent['reward'][i]) for i in range(num_train_opponents)),
                         np.mean(mean_train_stats_by_opponent['reward']), np.median(mean_train_stats_by_opponent['reward']),
                         np.min(mean_train_stats_by_opponent['reward']), np.max(mean_train_stats_by_opponent['reward'])))
-            if args.env_name == 'Overcooked':
+            if args.env_name == 'Overcooked' or args.env_name == 'LBF':
                 print(f'Mean/median success rate: {np.mean(mean_train_stats_by_opponent["success_rate"]):.2f}/{np.median(mean_train_stats_by_opponent["success_rate"]):.2f}, '
                       f'min/max success rate: {np.min(mean_train_stats_by_opponent["success_rate"]):.2f}/{np.max(mean_train_stats_by_opponent["success_rate"]):.2f}')
-                if mean_train_stats_by_opponent['visits_per_interaction'] is not None:
+                if args.env_name == 'Overcooked' and mean_train_stats_by_opponent['visits_per_interaction'] is not None:
                     print('Mean visits per interaction:', np.mean(mean_train_stats_by_opponent['visits_per_interaction']))
+                if mean_train_stats_by_opponent['shaping_reward'] is not None:
+                    print('Shaping: L2 board placements/ep {:.2f}, L2 chops/ep {:.2f}, L2 retrievals/ep {:.2f}, L2 platings/ep {:.2f}, '
+                          'shaping reward/ep {:.2f}, original env return/ep {:.2f}, success per opponent {}'.format(
+                              np.mean(mean_train_stats_by_opponent['l2_board_placements']),
+                              np.mean(mean_train_stats_by_opponent['l2_chops']),
+                              np.mean(mean_train_stats_by_opponent['l2_retrievals']),
+                              np.mean(mean_train_stats_by_opponent['l2_platings']),
+                              np.mean(mean_train_stats_by_opponent['shaping_reward']),
+                              np.mean(mean_train_stats_by_opponent['env_return']),
+                              tuple(round(float(x), 2) for x in mean_train_stats_by_opponent['success_rate'])))
 
         if args.wandb_user_name is not None \
                 and last_num_steps // args.log_interval != total_num_steps // args.log_interval \
@@ -757,6 +798,9 @@ def train_embedding(args, train_pool, eval_pool):
 
             if episode_result_ready:
                 train_info.update(reward=np.mean(mean_train_stats_by_opponent['reward']))
+                if mean_train_stats_by_opponent['shaping_reward'] is not None:
+                    train_info.update({k: float(np.mean(mean_train_stats_by_opponent[k]))
+                                       for k in ('l2_board_placements', 'l2_chops', 'l2_retrievals', 'l2_platings', 'shaping_reward', 'env_return')})
                 if use_policy_cls_reward:
                     train_info.update(
                         expl_reward_per_episode=np.mean(mean_train_stats_by_opponent['expl_reward_per_episode'])
@@ -770,7 +814,7 @@ def train_embedding(args, train_pool, eval_pool):
                                 mean_train_stats_by_opponent['expl_reward_per_interaction']
                             )
                         )
-                if args.env_name == 'Overcooked':
+                if args.env_name == 'Overcooked' or args.env_name == 'LBF':
                     success_rate = np.mean(mean_train_stats_by_opponent['success_rate'])
                     train_info.update(success_rate=success_rate)
                     if args.save_partial_ckpt is not None:
@@ -797,7 +841,7 @@ def train_embedding(args, train_pool, eval_pool):
             else:
                 torch.save(policy, os.path.join(save_path, "latest.pt"))
 
-            if last_num_steps // args.save_interval != total_num_steps // args.save_interval or j == num_updates - 1:
+            if last_num_steps // args.save_interval != total_num_steps // args.save_interval or j == num_updates - 1 or early_stop_triggered:
                 torch.save(policy, os.path.join(save_path, f"{total_num_steps}.pt"))
                 print('Model saved.')
 
@@ -806,6 +850,9 @@ def train_embedding(args, train_pool, eval_pool):
             for i in range(num_train_opponents):
                 train_stats_by_opponent[k][i].clear()
         rollouts.after_update()
+
+        if early_stop_triggered:
+            break
 
     # Finish training
     if args.wandb_user_name is not None:
@@ -844,7 +891,135 @@ if __name__ == '__main__':
     torch.set_num_threads(1)
 
     if arg.env_name == 'Overcooked':
-        from environment.overcooked.policy import get_train_eval_pool
+        if arg.use_4ing_recipes:
+            from environment.overcooked.policy import get_train_eval_pool_4ing
+            train_policies, eval_policies = get_train_eval_pool_4ing(arg)
+        elif arg.recipe_domain == '6recipe' and arg.use_l1_disjoint:
+            # Exp 2: L2 vs disjoint-capability L1 partners (R1R2 / R3R4 / R5R6).
+            from environment.overcooked.policy import get_train_eval_l1_disjoint_pool
+            if arg.l1_disjoint_train is None or arg.l1_disjoint_eval is None:
+                raise ValueError("--use-l1-disjoint requires --l1-disjoint-train and --l1-disjoint-eval")
+            print(f'Using DISJOINT L1 pool (6-recipe):')
+            print(f'  Train spec: {arg.l1_disjoint_train}')
+            print(f'  Eval spec:  {arg.l1_disjoint_eval}')
+            train_policies, eval_policies = get_train_eval_l1_disjoint_pool(
+                arg, arg.l1_disjoint_train, arg.l1_disjoint_eval
+            )
+        elif arg.recipe_domain == '6recipe' and arg.l0_pair_type is not None:
+            # Exp 2: L1 training against a specific 6-recipe L0 pair-type.
+            from environment.overcooked.policy import get_train_eval_l0_pool_6recipe
+            print(f'Using 6-recipe L0 pool, pair_type={arg.l0_pair_type}')
+            train_policies, eval_policies = get_train_eval_l0_pool_6recipe(arg)
+        elif arg.recipe_domain == '6recipe_x4' and arg.l0_pair_type is not None:
+            # 6recipe_x4 (2026-10-28): L1 training against the 4-ingredient-recipe L0s of one type (A/B/C).
+            from environment.overcooked.policy import get_train_eval_l0_pool_x4
+            print(f'Using 6recipe_x4 L0 pool, type={arg.l0_pair_type}')
+            train_policies, eval_policies = get_train_eval_l0_pool_x4(arg)
+        elif arg.use_l1_specialized:
+            if arg.l1_specialized_train is None or arg.l1_specialized_eval is None:
+                raise ValueError("--use-l1-specialized requires --l1-specialized-train and --l1-specialized-eval")
+            if arg.rule_based_opponents > 0 and getattr(arg, 'use_curriculum', False):
+                # CURRICULUM MODE: ramp from L0-only to L1-only over training
+                from environment.overcooked.policy import get_train_eval_curriculum_pool
+                warmup = getattr(arg, 'curriculum_warmup_steps', 5_000_000)
+                ramp   = getattr(arg, 'curriculum_ramp_steps',  25_000_000)
+                print(f'Using CURRICULUM pool (L0 → L1 ramp):')
+                print(f'  Train spec: {arg.l1_specialized_train}')
+                print(f'  Eval spec:  {arg.l1_specialized_eval}')
+                print(f'  L0 train: {arg.rule_based_opponents},  warmup: {warmup:,},  ramp: {ramp:,}')
+                train_policies, eval_policies = get_train_eval_curriculum_pool(
+                    arg, arg.l1_specialized_train, arg.l1_specialized_eval,
+                    num_l0_train=arg.rule_based_opponents,
+                    num_l0_eval=arg.rule_based_opponents,
+                    warmup_steps=warmup,
+                    ramp_steps=ramp,
+                )
+                # CurriculumPool is a single-item pool; override train_pool_size
+                arg.train_pool_size = len(train_policies)
+            elif arg.rule_based_opponents > 0:
+                # MIXED MODE: L1_PC specialized + L0 (Loft_PC)
+                from environment.overcooked.policy import get_train_eval_specialized_L1_L0_pool
+                type_sampling = getattr(arg, 'l1_type_sampling', False)
+                mode = "Setting B (type-sampling)" if type_sampling else "Setting A (individual seeds)"
+                print(f'Using SPECIALIZED L1_PC + L0 mixed pool [{mode}]:')
+                print(f'  Train spec: {arg.l1_specialized_train}')
+                print(f'  Eval spec:  {arg.l1_specialized_eval}')
+                print(f'  L0 train: {arg.rule_based_opponents},  L0 eval: {arg.rule_based_opponents}')
+                train_policies, eval_policies = get_train_eval_specialized_L1_L0_pool(
+                    arg, arg.l1_specialized_train, arg.l1_specialized_eval,
+                    num_l0_train=arg.rule_based_opponents,
+                    num_l0_eval=arg.rule_based_opponents,
+                    type_sampling=type_sampling,
+                )
+            else:
+                # Pure specialized L1 pool (original L2_PC path)
+                from environment.overcooked.policy import get_train_eval_specialized_L1_pool
+                print(f'Using SPECIALIZED L1 pool:')
+                print(f'  Train spec: {arg.l1_specialized_train}')
+                print(f'  Eval spec: {arg.l1_specialized_eval}')
+                train_policies, eval_policies = get_train_eval_specialized_L1_pool(
+                    arg, arg.l1_specialized_train, arg.l1_specialized_eval
+                )
+        elif arg.use_l1_partners:
+            if arg.l1_train_seeds is not None and arg.rule_based_opponents > 0:
+                # MIXED MODE: Use L1 agents + L0 rule-based agents
+                from environment.overcooked.policy import get_train_eval_mixed_L1_L0_pool
+                train_seeds = [int(s.strip()) for s in arg.l1_train_seeds.split(',')]
+                # Parse eval seeds if provided
+                eval_seeds = None
+                num_l1_eval = 0
+                if arg.l1_eval_seeds is not None:
+                    eval_seeds = [int(s.strip()) for s in arg.l1_eval_seeds.split(',')]
+                    num_l1_eval = len(eval_seeds)
+                # Calculate num_l0_eval from eval_pool_size - num_l1_eval
+                num_l0_eval = arg.eval_pool_size - num_l1_eval
+                print(f'Using MIXED L1+L0 pool: L1 train={train_seeds}, L1 eval={eval_seeds}, L0 train={arg.rule_based_opponents}, L0 eval={num_l0_eval}')
+                train_policies, eval_policies = get_train_eval_mixed_L1_L0_pool(
+                    arg, train_seeds, 
+                    eval_seeds=eval_seeds,
+                    num_l0_train=arg.rule_based_opponents,
+                    num_l0_eval=num_l0_eval
+                )
+            elif arg.l1_train_seeds is not None and arg.l1_eval_seeds is not None:
+                # Use custom seed selection for simplified L2 training
+                from environment.overcooked.policy import get_train_eval_level_1_pool_custom_seeds
+                train_seeds = [int(s.strip()) for s in arg.l1_train_seeds.split(',')]
+                eval_seeds = [int(s.strip()) for s in arg.l1_eval_seeds.split(',')]
+                print(f'Using custom L1 partner seeds: train={train_seeds}, eval={eval_seeds}')
+                train_policies, eval_policies = get_train_eval_level_1_pool_custom_seeds(arg, train_seeds, eval_seeds)
+            else:
+                # Use default sequential seed selection
+                from environment.overcooked.policy import get_train_eval_level_1_pool
+                train_policies, eval_policies = get_train_eval_level_1_pool(arg)
+        else:
+            from environment.overcooked.policy import get_train_eval_pool
+            train_policies, eval_policies = get_train_eval_pool(arg)
+    elif arg.env_name == 'LBF':
+        if getattr(arg, 'use_l1_specialized', False):
+            if arg.l1_specialized_train is None or arg.l1_specialized_eval is None:
+                raise ValueError('--use-l1-specialized requires --l1-specialized-train and --l1-specialized-eval')
+            from environment.lbf.policy import get_train_eval_l1_pool_lbf
+            horizon = getattr(arg, 'lbf_horizon', 80)
+            print(f'[LBF] Using L1 partner pool (horizon={horizon}):')
+            print(f'  Train spec: {arg.l1_specialized_train}')
+            print(f'  Eval spec:  {arg.l1_specialized_eval}')
+            train_policies, eval_policies = get_train_eval_l1_pool_lbf(
+                arg, arg.l1_specialized_train, arg.l1_specialized_eval, horizon=horizon
+            )
+        else:
+            from environment.lbf.policy import get_train_eval_pool as get_train_eval_pool_lbf
+            train_policies, eval_policies = get_train_eval_pool_lbf(arg)
+            # Optionally augment eval pool with L1 pretrained partners (train pool stays L0-only)
+            if getattr(arg, 'lbf_l1_eval_spec', None):
+                from environment.lbf.policy import get_train_eval_l1_pool_lbf
+                horizon = getattr(arg, 'lbf_horizon', 80)
+                print(f'[LBF] Augmenting eval pool with L1 partners: {arg.lbf_l1_eval_spec}')
+                _, l1_eval = get_train_eval_l1_pool_lbf(
+                    arg, arg.lbf_l1_eval_spec, arg.lbf_l1_eval_spec, horizon=horizon
+                )
+                eval_policies = eval_policies + l1_eval
+                arg.eval_pool_size = len(eval_policies)
+                print(f'[LBF] Eval pool: {arg.eval_pool_size - len(l1_eval)} L0 + {len(l1_eval)} L1')
     elif arg.env_name == 'KuhnPoker':
         if arg.allow_all_opponents:
             from environment.kuhn_poker.policy_imperfect import get_train_eval_pool
@@ -852,11 +1027,13 @@ if __name__ == '__main__':
             from environment.kuhn_poker.policy_new import get_train_eval_pool
     elif arg.env_name == 'MPE':
         from environment.mpe.policy_both import get_train_eval_pool
+        train_policies, eval_policies = get_train_eval_pool(arg)
     elif arg.env_name == 'IPD':
         from environment.ipd.policy import get_train_eval_pool
+        train_policies, eval_policies = get_train_eval_pool(arg)
     else:
         raise NotImplementedError
-    train_policies, eval_policies = get_train_eval_pool(arg)
+    
     if arg.opponent_id is not None:
         train_policies = [train_policies[arg.opponent_id]]
         print(f'Setting a specific opponent {arg.opponent_id} to train against, adjusting train pool size to 1.')

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.egg-info/
+logs/
+wandb/
+*.log
+.env
+*.key
+llm_agent/.env
+.claude/

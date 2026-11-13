@@ -12,9 +12,26 @@ MIXABLE_INGREDS = {'Lettuce':['Tomato', 'Carrot', 'Onion', 'Potato', 'Broccoli']
                    'Onion':['Carrot', 'Lettuce', 'Tomato', 'Potato', 'Broccoli'],
                    'Carrot':['Tomato', 'Onion', 'Lettuce', 'Potato', 'Broccoli'],
                    'Potato': ['Lettuce', 'Tomato', 'Onion', 'Carrot', 'Broccoli'],
-                   'Broccoli': ['Tomato', 'Onion', 'Lettuce', 'Carrot', 'Potato']}
+                   'Broccoli': ['Tomato', 'Onion', 'Lettuce', 'Carrot', 'Potato'],
+                   # 6-recipe domain disjoint pairs (no cross-mixing with the original 6)
+                   'Cucumber': ['Pepper'],
+                   'Pepper':   ['Cucumber'],
+                   'Spinach':  ['Mushroom'],
+                   'Mushroom': ['Spinach'],
+                   'Pumpkin':  ['Garlic'],
+                   'Garlic':   ['Pumpkin']}
 
-def is_mixable(food, container):
+# 'pair' plate mixing (2026-10-22, opt-in via env config plate_mixing: pair): EVERY ingredient behaves
+# like the R4-R6 set -- a plate accepts only the exact recipe partner of what it already holds, so a
+# wrong second half is rejected (stays in hand) and the plate can never hold more than one recipe.
+PAIR_ONLY_MIXABLE = {'Lettuce': ['Onion'],    'Onion': ['Lettuce'],
+                     'Potato': ['Broccoli'],  'Broccoli': ['Potato'],
+                     'Tomato': ['Carrot'],    'Carrot': ['Tomato'],
+                     'Cucumber': ['Pepper'],  'Pepper': ['Cucumber'],
+                     'Spinach': ['Mushroom'], 'Mushroom': ['Spinach'],
+                     'Pumpkin': ['Garlic'],   'Garlic': ['Pumpkin']}
+
+def is_mixable(food, container, pair_only=False, mixing_sets=None):
     if len(container.content)==0:
         return True
     contained_food = [type(f).__name__ for f in container.content]
@@ -22,7 +39,14 @@ def is_mixable(food, container):
     if food_name in contained_food:
         # do not accept the same ingred
         return False
-    if all([food_name in MIXABLE_INGREDS[type(food_obj).__name__] for food_obj in container.content]):
+    if mixing_sets is not None:
+        # 'shared_recipe' plate mixing (2026-10-28, 6recipe_x4 domain): accept the food iff at least one
+        # recipe contains everything already on the plate plus this food. Ingredients are shared across
+        # recipes there, so a fixed partner table cannot express it. Default None keeps the old tables.
+        want = set(contained_food) | {food_name}
+        return any(want <= s for s in mixing_sets)
+    table = PAIR_ONLY_MIXABLE if pair_only else MIXABLE_INGREDS
+    if all([food_name in table.get(type(food_obj).__name__, []) for food_obj in container.content]):
         return True
     return False
     
@@ -46,7 +70,9 @@ class CookingWorld:
 
     # AGENT_ACTIONS: 0: Noop, 1: Left, 2: right, 3: down, 4: up, 5: interact
 
-    def __init__(self):
+    def __init__(self, pair_only_mixing=False, mixing_sets=None):
+        self.pair_only_mixing = pair_only_mixing   # see is_mixable / PAIR_ONLY_MIXABLE
+        self.mixing_sets = mixing_sets             # see is_mixable (shared_recipe mode); None = unchanged
         self.agents = []
         self.width = 0
         self.height = 0
@@ -205,12 +231,12 @@ class CookingWorld:
         highest_order_obj = self.get_highest_order_object(dynamic_objects)
         if isinstance(highest_order_obj, Container) and isinstance(agent.holding, Food):
             if agent.holding.done():
-                if is_mixable(agent.holding, highest_order_obj):
+                if is_mixable(agent.holding, highest_order_obj, self.pair_only_mixing, self.mixing_sets):
                     highest_order_obj.add_content(agent.holding)
                     agent.put_down(target_location)
         if isinstance(highest_order_obj, Food) and isinstance(agent.holding, Container):
             if highest_order_obj.done():
-                if is_mixable(highest_order_obj, agent.holding):
+                if is_mixable(highest_order_obj, agent.holding, self.pair_only_mixing, self.mixing_sets):
                     agent.holding.add_content(highest_order_obj)
                     highest_order_obj.move_to(agent.location)
 

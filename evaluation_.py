@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 import wandb
+import copy
+import os
+import pickle
 from learning.storage_ import PeriodicHistoryStorage
 from learning.model import LatentPolicy
 from learning.utils import PolicyClassificationRewardTracker
@@ -14,10 +17,13 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
     dump_latents = hasattr(args, 'dump_latents') and args.dump_latents
 
     if eval_history is not None:
-        assert args.history_use_episodes and (eval_episodes == eval_history.clear_period or args.pop_oldest_episode or args.reward_drop_ratio is not None)
+        # print(args.history_use_episodes)
+        # print(eval_history.clear_period)
+        # print(args.pop_oldest_episode)
+        assert args.history_use_episodes and (eval_episodes == eval_history.clear_period or args.pop_oldest_episode or getattr(args, 'reward_drop_ratio', None) is not None)
     num_eval_policies = len(eval_policies)
     assert num_eval_policies == eval_envs.num_envs
-
+    recipe_pref_over_episodes = []
     eval_envs.env_method('full_reset')
     last_obs = obs = eval_envs.reset()
     update_history = update_history and eval_history is not None
@@ -39,12 +45,27 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
     }
 
     use_policy_cls_reward = args.policy_cls_reward_coef is not None and inspect_idx is not None
+    print("value of use_policy", use_policy_cls_reward)
+    # import sys 
+    # sys.exit()
     if use_policy_cls_reward:
         assert args.policy_cls_reward_coef == 0.0
     policy_cls_reward_tracker = PolicyClassificationRewardTracker(args, num_eval_policies, num_eval_policies) \
         if use_policy_cls_reward else None
-    first_inspect = True
-
+    first_inspect = False
+    recipe_pref_by_opponent = [[] for _ in range(num_eval_policies)]
+    episodes = [0 for _ in range(num_eval_policies)]
+    
+    # Initialize trajectory storage if enabled
+    save_trajectories = hasattr(args, 'save_eval_trajectories') and args.save_eval_trajectories
+    dump_action_dist = save_trajectories and getattr(args, 'dump_action_dist', False)
+    if save_trajectories:
+        trajectories_by_opponent = [[] for _ in range(num_eval_policies)]
+        traj_keys = ['observations', 'actions', 'rewards', 'dones', 'infos']
+        if dump_action_dist:
+            traj_keys.append('action_probs')
+        current_trajectories = [{k: [] for k in traj_keys}
+                               for _ in range(num_eval_policies)]
     while min(len(eval_stats_by_opponent['reward'][i]) for i in range(num_eval_policies)) < eval_episodes:
         if inspect_idx is not None:
             render_kwargs = {
@@ -70,15 +91,29 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
         # Sample actions
         with torch.no_grad():
             if eval_history is not None:
-                indices = eval_history.get_all_current_indices()
-                history = (eval_history, (all_agent_indices,) + indices)
+                # Option to test with empty history (forces zero latent / default policy)
+                if hasattr(args, 'test_empty_history') and args.test_empty_history:
+                    history = None
+                else:
+                    indices = eval_history.get_all_current_indices()
+                    history = (eval_history, (all_agent_indices,) + indices)
             else:
                 history = None
+            rnn_states_pre = rnn_states.clone() if (rnn_states is not None and dump_action_dist) else None
             _, action, action_log_prob, rnn_states = policy.act(
                 obs, rnn_states, masks, all_agent_indices,
                 history=history,
                 deterministic=False
             )
+            if dump_action_dist:
+                # Re-derive the action distribution. Reuse cached latents from policy.act
+                # to avoid re-running the encoder. rnn_states_pre is the pre-act state.
+                cached_latents = getattr(policy, 'last_latents', None)
+                step_dist, _, _ = policy.get_action_dist(
+                    obs, rnn_states_pre, masks, all_agent_indices,
+                    history=history, latents=cached_latents
+                )
+                step_probs = step_dist.probs.detach().cpu().numpy()
             if dump_latents:
                 assert policy.last_latents is not None
                 assert len(policy.last_latents) == num_eval_policies
@@ -86,6 +121,14 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                     eval_stats_by_opponent['latents'][i][-1].append(policy.last_latents[i].clone())
             policy_pred = policy.aux_pol_cls_head(policy.last_latents) if use_policy_cls_reward else None
 
+        # Collect trajectory data before taking action
+        if save_trajectories:
+            for i in range(num_eval_policies):
+                current_trajectories[i]['observations'].append(obs[i].cpu().numpy().copy())
+                current_trajectories[i]['actions'].append(action[i].cpu().numpy().copy())
+                if dump_action_dist:
+                    current_trajectories[i]['action_probs'].append(step_probs[i].copy())
+        
         # Obser reward and next obs
         if str(action.device) == 'cpu':
             # This is somehow required by the VecEnv wrapper for action tensors on CPU
@@ -97,7 +140,13 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
             prev_agent_perm_all = None
 
         obs, reward, done, infos = eval_envs.step(action.squeeze(-1))
-
+        
+        # Collect reward, done, and info after step
+        if save_trajectories:
+            for i in range(num_eval_policies):
+                current_trajectories[i]['rewards'].append(float(reward[i].cpu().numpy() if torch.is_tensor(reward[i]) else reward[i]))
+                current_trajectories[i]['dones'].append(bool(done[i]))
+                current_trajectories[i]['infos'].append(copy.deepcopy(infos[i]))
         if use_policy_cls_reward:
             policy_cls_reward_tracker.advance(reward, infos, policy_pred, prev_agent_perm_all, inspect_idx)
             input(f'Actual reward {reward[inspect_idx]}, policy classification reward {infos[inspect_idx]["expl_reward"]}')
@@ -105,7 +154,7 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
         for i, info in enumerate(infos):
             if 'episode' in info.keys():
                 eval_stats_by_opponent['reward'][i].append(info['episode']['r'])
-                if args.env_name == 'Overcooked':
+                if args.env_name == 'Overcooked' or args.env_name == 'LBF':
                     eval_stats_by_opponent['success_rate'][i].append(
                         int(info['termination_info'].endswith('completed'))
                     )
@@ -118,7 +167,22 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                             )
                 if args.env_name == 'KuhnPoker':
                     eval_stats_by_opponent['showdown'][i].append(info['showdown'])
-
+            if done[i]:
+                    # print("for baseline tested against opponent", i)
+                    
+                    episodes[i] += 1
+                    # print("number of episodes played and saved", episodes[i])
+                    # import copy
+                    
+                    # recipe_pref_this_episode = eval_envs.env_method("get_recipe_pref_all_ep", indices=[i])
+                    # a = copy.deepcopy(recipe_pref_this_episode)
+                    # recipe_pref_by_opponent[i].append(a)
+                    
+                    # Save completed trajectory
+                    if save_trajectories:
+                        trajectories_by_opponent[i].append(copy.deepcopy(current_trajectories[i]))
+                        # Reset for next episode
+                        current_trajectories[i] = {k: [] for k in traj_keys}
             if update_history:
                 if args.self_obs_mode:
                     if args.self_action_mode:
@@ -129,13 +193,17 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                 elif 'opponent_obs' in info:
                     eval_history.add(i, info['opponent_obs'], info['opponent_act'],
                                      reward[i][0] if eval_history.has_rew_done else None)
+                # print("I am here", done[i], info['termination_info'])
                 if done[i]:
+                    # print("for baseline tested against opponent", i)
                     if args.self_obs_mode:
+                        print("for policy number:", i)
                         eval_history.add(i, torch.from_numpy(info['terminal_observation']).float(), None,
                                          0.0 if eval_history.has_rew_done else None)
+                        print("I am here", info['termination_info'])
                     eval_history.finish_episode(i)
 
-        if (args.opponent_switch_period_min is not None or args.opponent_switch_schedule is not None) and update_history:
+        if (getattr(args, 'opponent_switch_period_min', None) is not None or getattr(args, 'opponent_switch_schedule', None) is not None) and update_history:
             for i, info in enumerate(infos):
                 if 'episode' in info.keys():
                     # Reward decreases significantly, clear context
@@ -144,15 +212,15 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                     num_full_episodes = eval_history.current_episode[i]
                     reward_max = max(eval_stats_by_opponent[metric][i][-num_full_episodes:])
                     reward_min = min(eval_stats_by_opponent[metric][i][-num_full_episodes:])
-                    reward_threshold = reward_max * args.reward_drop_ratio + reward_min * (1.0 - args.reward_drop_ratio)
+                    # reward_threshold = reward_max * args.reward_drop_ratio + reward_min * (1.0 - args.reward_drop_ratio)
                     # input()
-                    if num_full_episodes > 1 and eval_stats_by_opponent[metric][i][-1] < reward_threshold:
+                    # if num_full_episodes > 1 and eval_stats_by_opponent[metric][i][-1] < reward_threshold:
                         # print(
                         #     f'Clearing history for opponent {i} due to reward drop, current total num episodes: {len(eval_stats_by_opponent[metric][i])}, current completed episodes before last clearning {num_full_episodes}'
                         # )
                         # print(f'Process {i} episode {len(eval_stats_by_opponent[metric][i])} {metric}: {eval_stats_by_opponent[metric][i]}, threshold: {reward_threshold}, max: {reward_max}, min: {reward_min}')
                         # input()
-                        eval_history.clear_to_one_episode(i)
+                        # eval_history.clear_to_one_episode(i)
 
         last_obs = obs
 
@@ -161,7 +229,7 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
                                        for i, done_ in enumerate(done)]).to(obs.device)
         else:
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done]).to(obs.device)
-
+        
     # Mean over episodes, no action over opponents
     mean_eval_stats_by_opponent = {
         k: None if min(len(eval_stats_by_opponent[k][i]) for i in range(num_eval_policies)) < eval_episodes
@@ -193,14 +261,14 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
             latents=[eval_stats_by_opponent['latents'][i][:eval_episodes] for i in range(num_eval_policies)]
         )
 
-    if args.env_name == 'Overcooked':
+    if args.env_name == 'Overcooked' or args.env_name == 'LBF':
         eval_info.update({
             'success_rate': np.mean(mean_eval_stats_by_opponent['success_rate']),
             'success_rate_per_opponent': np.array(mean_eval_stats_by_opponent['success_rate']),
             'cumul_success_rate': mean_cumul_eval_stats['success_rate'],
             'cur_success_rate': mean_cur_eval_stats['success_rate']
         })
-        if args.visit_reward_coef is not None:
+        if args.env_name == 'Overcooked' and args.visit_reward_coef is not None:
             eval_info.update({
                 'visits_per_interaction': np.mean([eval_stats_by_opponent['visits_per_interaction'][i][0] for i in range(num_eval_policies)]),
             })
@@ -213,13 +281,52 @@ def evaluate(args, eval_policies, eval_episodes, eval_envs, eval_history: Period
     if log_steps is not None:
         log_group = 'eval' if use_latent else 'eval_ind'
         wandb.log({f'{log_group}/{k}': v for k, v in eval_info.items()}, step=log_steps)
-
+    print("number of policies", num_eval_policies)
+    print("numbe of episodes", eval_episodes)
     print(" Evaluation using {} episodes: {}\n".format(num_eval_policies * eval_episodes,
                                                        {k: v for k, v in eval_info.items() if 'cumul' not in k and 'cur' not in k and k != 'latents'}))
-    if args.env_name == 'Overcooked':
+    print("for baselines",episodes)
+    
+    if args.env_name == 'Overcooked' or args.env_name == 'LBF':
         print('All success rates, by opponent policy:', mean_eval_stats_by_opponent['success_rate'])
+    # print(len(recipe_pref_by_opponent[0][1]))
+    # print(recipe_pref_by_opponent[0][1])
 
     if update_history:
         eval_history.trim()
+    
+    # Save trajectories to disk organized by checkpoint
+    if save_trajectories:
+        # Determine save directory
+        if args.eval_trajectory_dir is None:
+            traj_dir = os.path.join('logs', args.env_name, args.exp_name, 'eval_trajectories')
+        else:
+            traj_dir = args.eval_trajectory_dir
+        
+        # Create directory with timestep info for tracking progression over training
+        if log_steps is not None:
+            checkpoint_name = f'checkpoint_{log_steps:09d}'
+        else:
+            checkpoint_name = 'final'
+        
+        traj_save_path = os.path.join(traj_dir, checkpoint_name)
+        os.makedirs(traj_save_path, exist_ok=True)
+        
+        # Save trajectories for each opponent
+        for i in range(num_eval_policies):
+            save_file = os.path.join(traj_save_path, f'opponent_{i}_trajectories.pkl')
+            with open(save_file, 'wb') as f:
+                # Save only the requested number of episodes
+                pickle.dump({
+                    'trajectories': trajectories_by_opponent[i][:eval_episodes],
+                    'eval_stats': {
+                        'reward': eval_stats_by_opponent['reward'][i][:eval_episodes],
+                        'success_rate': eval_stats_by_opponent['success_rate'][i][:eval_episodes] if args.env_name in ('Overcooked', 'LBF') else None,
+                    },
+                    'checkpoint_steps': log_steps,
+                    'opponent_id': i,
+                }, f)
+        
+        print(f"Saved {num_eval_policies} opponent trajectories to {traj_save_path}/")
 
-    return eval_info
+    return eval_info, recipe_pref_by_opponent

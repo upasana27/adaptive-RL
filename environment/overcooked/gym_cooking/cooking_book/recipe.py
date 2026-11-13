@@ -41,7 +41,8 @@ class Recipe:
         plate = world.world_objects['Plate'][0]
         for obj in world.get_objects_at(plate.location, DynamicObject):
             if obj.name() not in self.possible_objects_list:
-                assert obj.name() in ['Tomato', 'Onion', 'Lettuce', 'Carrot', 'Potato', 'Broccoli'], \
+                assert obj.name() in ['Tomato', 'Onion', 'Lettuce', 'Carrot', 'Potato', 'Broccoli',
+                                       'Cucumber', 'Pepper', 'Spinach', 'Mushroom', 'Pumpkin', 'Garlic'], \
                     f'Unrecognized object {obj.name()}'
                 return False
         return True

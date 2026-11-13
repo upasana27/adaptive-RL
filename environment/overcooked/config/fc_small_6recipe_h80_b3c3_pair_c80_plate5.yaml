@@ -1,0 +1,40 @@
+name: overcooked
+mode: fc_small_divider_6recipe
+horizon: 80
+recipe_domain: 6recipe
+
+recipes: [
+  "LettuceOnionSalad",
+  "OnionLettuceSalad",
+
+  "PotatoBroccoliSalad",
+  "BroccoliPotatoSalad",
+
+  "TomatoCarrotSalad",
+  "CarrotTomatoSalad",
+
+  "CucumberPepperSalad",
+  "PepperCucumberSalad",
+
+  "SpinachMushroomSalad",
+  "MushroomSpinachSalad",
+
+  "PumpkinGarlicSalad",
+  "GarlicPumpkinSalad",
+]
+obs_spaces: dense
+obs_range: 14
+num_agents: 2
+interact_reward: 0.5
+progress_reward: 1.0
+complete_reward: 80.0
+step_cost: 0.2
+#display: True
+# Strong board+chop shaping diagnostic (2026-10-21): +3 once per raw ingredient type per episode when agent 0
+# (LEFT/L2) places it on its own cutboard, +3 once per type when agent 0 completes chopping it there.
+# Both shared by both agents, added outside the recipe max. Everything else identical to fc_small_6recipe_h80.yaml.
+board_placement_reward: 3.0
+board_chop_reward: 3.0
+plate_mixing: pair
+plating_reward: 5.0
+# (2026-10-22) pair-only plates + complete_reward 80 + 5.0 once per episode on the L2 first plating; rest identical to board3chop3.

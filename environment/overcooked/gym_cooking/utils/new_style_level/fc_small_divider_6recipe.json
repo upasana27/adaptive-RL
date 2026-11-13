@@ -1,0 +1,28 @@
+{
+  "LEVEL_LAYOUT": "-------\n-  -  -\n-  -  -\n-  -  -\n-  -  -\n-  -  -\n-  -  -\n-  -  -\n-  -  -\n-  -  -\n-------",
+  "STATIC_OBJECTS": [{"CutBoard": {"COUNT": 1, "X_POSITION": [0], "Y_POSITION":  [7]}},
+                {"CutBoard": {"COUNT": 1, "X_POSITION": [5], "Y_POSITION":  [10]}},
+
+                     {"DeliverSquare": {"COUNT": 1, "X_POSITION": [6], "Y_POSITION":  [3]}}
+                   ],
+  "DYNAMIC_OBJECTS": [
+                      {"Plate":  {"COUNT": 1, "X_POSITION": [3], "Y_POSITION":  [2,3,4]}},
+
+                      {"Lettuce":   {"COUNT": 1, "X_POSITION": [0], "Y_POSITION":  [1,2,3,4,5,6]}},
+                      {"Tomato":    {"COUNT": 1, "X_POSITION": [0], "Y_POSITION":  [1,2,3,4,5,6]}},
+                      {"Potato":    {"COUNT": 1, "X_POSITION": [0], "Y_POSITION":  [1,2,3,4,5,6]}},
+                      {"Cucumber":  {"COUNT": 1, "X_POSITION": [0], "Y_POSITION":  [1,2,3,4,5,6]}},
+                      {"Spinach":   {"COUNT": 1, "X_POSITION": [0], "Y_POSITION":  [1,2,3,4,5,6]}},
+                      {"Pumpkin":   {"COUNT": 1, "X_POSITION": [0], "Y_POSITION":  [1,2,3,4,5,6]}},
+
+                      {"Onion":     {"COUNT": 1, "X_POSITION": [6], "Y_POSITION":  [4,5,6,7,8,9]}},
+                      {"Carrot":    {"COUNT": 1, "X_POSITION": [6], "Y_POSITION":  [4,5,6,7,8,9]}},
+                      {"Broccoli":  {"COUNT": 1, "X_POSITION": [6], "Y_POSITION":  [4,5,6,7,8,9]}},
+                      {"Pepper":    {"COUNT": 1, "X_POSITION": [6], "Y_POSITION":  [4,5,6,7,8,9]}},
+                      {"Mushroom":  {"COUNT": 1, "X_POSITION": [6], "Y_POSITION":  [4,5,6,7,8,9]}},
+                      {"Garlic":    {"COUNT": 1, "X_POSITION": [6], "Y_POSITION":  [4,5,6,7,8,9]}}
+  ],
+  "AGENTS": [{"MAX_COUNT": 1, "X_POSITION": [1 ,2], "Y_POSITION":  [3,4,5,6,7,8,9]},
+             {"MAX_COUNT": 1, "X_POSITION": [4 ,5], "Y_POSITION":  [4,5,6,7,8,9]}
+            ]
+}

@@ -209,6 +209,114 @@ class Broccoli(ChopFood):
             return "FreshBroccoli"
 
 
+class Cucumber(ChopFood):
+
+    def __init__(self, location):
+        super().__init__(location)
+
+    def done(self):
+        if self.chop_state == ChopFoodStates.CHOPPED:
+            return True
+        else:
+            return False
+
+    def file_name(self) -> str:
+        if self.done():
+            return "ChoppedCucumber"
+        else:
+            return "FreshCucumber"
+
+
+class Pepper(ChopFood):
+
+    def __init__(self, location):
+        super().__init__(location)
+
+    def done(self):
+        if self.chop_state == ChopFoodStates.CHOPPED:
+            return True
+        else:
+            return False
+
+    def file_name(self) -> str:
+        if self.done():
+            return "ChoppedPepper"
+        else:
+            return "FreshPepper"
+
+
+class Spinach(ChopFood):
+
+    def __init__(self, location):
+        super().__init__(location)
+
+    def done(self):
+        if self.chop_state == ChopFoodStates.CHOPPED:
+            return True
+        else:
+            return False
+
+    def file_name(self) -> str:
+        if self.done():
+            return "ChoppedSpinach"
+        else:
+            return "FreshSpinach"
+
+
+class Mushroom(ChopFood):
+
+    def __init__(self, location):
+        super().__init__(location)
+
+    def done(self):
+        if self.chop_state == ChopFoodStates.CHOPPED:
+            return True
+        else:
+            return False
+
+    def file_name(self) -> str:
+        if self.done():
+            return "ChoppedMushroom"
+        else:
+            return "FreshMushroom"
+
+
+class Pumpkin(ChopFood):
+
+    def __init__(self, location):
+        super().__init__(location)
+
+    def done(self):
+        if self.chop_state == ChopFoodStates.CHOPPED:
+            return True
+        else:
+            return False
+
+    def file_name(self) -> str:
+        if self.done():
+            return "ChoppedPumpkin"
+        else:
+            return "FreshPumpkin"
+
+
+class Garlic(ChopFood):
+
+    def __init__(self, location):
+        super().__init__(location)
+
+    def done(self):
+        if self.chop_state == ChopFoodStates.CHOPPED:
+            return True
+        else:
+            return False
+
+    def file_name(self) -> str:
+        if self.done():
+            return "ChoppedGarlic"
+        else:
+            return "FreshGarlic"
+
+
 class Agent(Object):
 
     def __init__(self, location, color, name):
@@ -252,7 +360,13 @@ StringToClass = {
     "Blender": Blender,
     "Carrot": Carrot,
     "Potato": Potato,
-    "Broccoli": Broccoli
+    "Broccoli": Broccoli,
+    "Cucumber": Cucumber,
+    "Pepper": Pepper,
+    "Spinach": Spinach,
+    "Mushroom": Mushroom,
+    "Pumpkin": Pumpkin,
+    "Garlic": Garlic,
 }
 
 ClassToString = {
@@ -268,7 +382,13 @@ ClassToString = {
     Blender: "Blender",
     Carrot: "Carrot",
     Potato: "Potato",
-    Broccoli: "Broccoli"
+    Broccoli: "Broccoli",
+    Cucumber: "Cucumber",
+    Pepper: "Pepper",
+    Spinach: "Spinach",
+    Mushroom: "Mushroom",
+    Pumpkin: "Pumpkin",
+    Garlic: "Garlic",
 }
 
 GAME_CLASSES = [Floor, Counter, CutBoard, DeliverSquare, Tomato, Lettuce, Onion, Plate, Agent, Blender, Carrot, Potato, Broccoli]
@@ -278,3 +398,24 @@ GAME_CLASSES_HOLDABLE_IDX = {cls:i for i, cls in enumerate(["Tomato", "Lettuce",
 FOOD_CLASSES = ["Tomato", "Lettuce", "Onion", "Carrot", "Potato", "Broccoli"]
 FOOD_CLASSES_IDX = {cls:i for i, cls in enumerate(FOOD_CLASSES)}
 OBJ_IDX = {ClassToString[cls]:i for i, cls in enumerate(GAME_CLASSES[1:])}
+
+
+EXTRA_INGREDIENT_NAMES_6RECIPE = ["Cucumber", "Pepper", "Spinach", "Mushroom", "Pumpkin", "Garlic"]
+EXTRA_INGREDIENT_CLASSES_6RECIPE = [Cucumber, Pepper, Spinach, Mushroom, Pumpkin, Garlic]
+
+EXTENDED_STRING_TO_CLASS_6RECIPE = dict(StringToClass)
+EXTENDED_STRING_TO_CLASS_6RECIPE.update({n: c for n, c in zip(EXTRA_INGREDIENT_NAMES_6RECIPE, EXTRA_INGREDIENT_CLASSES_6RECIPE)})
+
+EXTENDED_CLASS_TO_STRING_6RECIPE = dict(ClassToString)
+EXTENDED_CLASS_TO_STRING_6RECIPE.update({c: n for n, c in zip(EXTRA_INGREDIENT_NAMES_6RECIPE, EXTRA_INGREDIENT_CLASSES_6RECIPE)})
+
+EXTENDED_GAME_CLASSES_6RECIPE = list(GAME_CLASSES) + list(EXTRA_INGREDIENT_CLASSES_6RECIPE)
+EXTENDED_GAME_CLASSES_STATE_LENGTH_6RECIPE = list(GAME_CLASSES_STATE_LENGTH) + [(c, 2) for c in EXTRA_INGREDIENT_CLASSES_6RECIPE]
+EXTENDED_GAME_CLASSES_HOLDABLE_IDX_6RECIPE = {
+    cls: i for i, cls in enumerate(
+        ["Tomato", "Lettuce", "Onion", "Plate", "Carrot", "Potato", "Broccoli"] + EXTRA_INGREDIENT_NAMES_6RECIPE
+    )
+}
+EXTENDED_FOOD_CLASSES_6RECIPE = list(FOOD_CLASSES) + list(EXTRA_INGREDIENT_NAMES_6RECIPE)
+EXTENDED_FOOD_CLASSES_IDX_6RECIPE = {cls: i for i, cls in enumerate(EXTENDED_FOOD_CLASSES_6RECIPE)}
+EXTENDED_OBJ_IDX_6RECIPE = {EXTENDED_CLASS_TO_STRING_6RECIPE[cls]: i for i, cls in enumerate(EXTENDED_GAME_CLASSES_6RECIPE[1:])}

@@ -900,8 +900,16 @@ class LatentPolicy(nn.Module):
             self.actors = None
 
         # Auxiliary tasks
-        # Auxiliary policy classifier removed
-        self.aux_pol_cls_head = None
+        # Peer-identifier (auxiliary policy classifier) — restored from PACE paper's setup.
+        # Trained via CE loss against the true partner index; also used to compute
+        # a policy-classification reward if --policy-cls-reward-coef is set.
+        if use_aux_pol_cls:
+            self.aux_pol_cls_head = nn.Linear(
+                self.encoder.latent_dim,
+                indices_mapper.args.policy_id_max.sum().item()
+            )
+        else:
+            self.aux_pol_cls_head = None
 
         if use_aux_value_pred:
             self.aux_val_pred_head = Critic(algo, value_obj, dueling, obs_shape, self.encoder.latent_dim, action_space.n,

@@ -62,6 +62,18 @@ def make_env(args, env_id, seed, rank, log_dir, allow_early_resets, render_rank=
             else:
                 from environment.overcooked.overcooked_single import Overcooked_SingleEnv
                 env = Overcooked_SingleEnv(env)
+        elif env_id == 'LBF':
+            from environment.lbf.lbf_maker import LBFMaker
+            override_kwargs = {}
+            if hasattr(args, 'horizon') and args.horizon is not None:
+                override_kwargs['horizon'] = args.horizon
+            env = LBFMaker.make_env_from_config(args.env_config, **override_kwargs)
+            if args.multi_agent > 1:
+                from environment.lbf.lbf_multi import LBF_MultiEnv
+                env = LBF_MultiEnv(env)
+            else:
+                from environment.lbf.lbf_single import LBF_SingleEnv
+                env = LBF_SingleEnv(env)
         elif env_id == 'MPE':
             from environment.mpe.env import MPE
             assert args.shaped_reward or args.collide_reward, 'At least one of the rewards must be activated'

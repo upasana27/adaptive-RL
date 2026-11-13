@@ -30,6 +30,9 @@ def get_args():
         '--log-dir', type=str, required=True
     )
     parser.add_argument(
+        '--exp-name', type=str, default='test', help='experiment name for organizing trajectories'
+    )
+    parser.add_argument(
         '--env-name', type=str
     )
     # parser.add_argument(
@@ -216,6 +219,113 @@ def get_args():
     parser.add_argument(
         '--reward-drop-ratio', type=float, help='ratio of reward drop before clearing context'
     )
+    parser.add_argument(
+        '--save-eval-trajectories', action='store_true', help='save detailed trajectories during evaluation'
+    )
+    parser.add_argument(
+        '--eval-trajectory-dir', type=str, default=None, help='directory to save evaluation trajectories (default: logs/{env_name}/{exp_name}/eval_trajectories)'
+    )
+    parser.add_argument(
+        '--use-l1-partners', action='store_true', help='load L1 pretrained partners for L2 evaluation'
+    )
+    parser.add_argument(
+        '--l1-eval-seeds', type=str, default=None, help='comma-separated list of L1 seeds for evaluation (e.g., "5,10,2")'
+    )
+    parser.add_argument(
+        '--use-l1-specialized', action='store_true',
+        help='load SPECIALIZED L1 pretrained partners (LO_PB/LO_TC/PB_TC) for L2 evaluation'
+    )
+    parser.add_argument(
+        '--l1-specialized-train', type=str, default=None,
+        help='Specialized L1 train pool spec: "TYPE:seed1,seed2;..." (mirrors train_.py)'
+    )
+    parser.add_argument(
+        '--l1-specialized-eval', type=str, default=None,
+        help='Specialized L1 eval pool spec: "TYPE:seed1,seed2;..." (mirrors train_.py)'
+    )
+    parser.add_argument(
+        '--latent-training', action='store_true',
+        help='mark partners as latent-training policies (needed by specialized pool builder)'
+    )
+    parser.add_argument(
+        '--dump-action-dist', action='store_true',
+        help='also dump per-step action probability distributions (Phase 0 / D3)'
+    )
+    parser.add_argument(
+        '--null-opponent', action='store_true',
+        help='use a NullPolicy (always-noop) opponent pool (Phase 0 / D1)'
+    )
+    parser.add_argument(
+        '--partner-policy-paths', type=str, default=None,
+        help='Phase 0 / D2: comma-separated checkpoint paths for L1 partners. '
+             'Each path becomes one entry in the opponent test_pool. Wraps each as '
+             'PretrainedPolicy_test on the opposite player slot.'
+    )
+    parser.add_argument(
+        '--feed-partner-history', action='store_true',
+        help='2026-10-20: with --partner-policy-paths, fill each L1 partner\'s history as in its own '
+             'training (own obs + ego action, kept across the 5-episode meta-episode). Default off = '
+             'old behaviour (partner history never written). PACE-style partners only (self-obs-mode).'
+    )
+    parser.add_argument(
+        '--l0-prober', action='store_true',
+        help='Replace the L0 partner with a RecipeProber that cycles through revealing each of '
+             'the 6 FI recipes in randomized order (fetch ingredient to divider, never plate). '
+             'Tests whether a trained partner reacts to PROBES rather than to a committed reveal.'
+    )
+    parser.add_argument(
+        '--l0-prober-dwell', type=int, default=10,
+        help='Steps spent revealing each recipe before the prober switches (default 10).'
+    )
+    parser.add_argument(
+        '--l0-truncate-steps', type=int, default=None,
+        help='Make the rule-based L0 partner act for only the first N steps of each episode, '
+             'then NOOP forever. Sweeps how much partner action the ego needs before it reacts '
+             '(an L0 usually makes its first pickup around step 3-4).'
+    )
+    parser.add_argument(
+        '--l0-policy-type', type=str, default='full', choices=['minimum','medium','full'],
+        help="L0 event repertoire. 'full' plates+delivers (a COMMITTED reveal). 'minimum' "
+             "fetches an ingredient to the divider but never plates it -- a reveal WITHOUT "
+             "commitment, i.e. a PROBE. Use it to test whether a partner responds to probing."
+    )
+    parser.add_argument(
+        '--l0-pair-type', type=str, default=None, choices=['R1R2', 'R3R4', 'R5R6', 'ALL', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
+        help='6-recipe (FI) rule-based L0 pool selector, mirroring train_.py. Lets an FI L1 be '
+             'evaluated against the same L0 partners it trained on. Rule-based partners bypass '
+             'the PretrainedPolicy_test path entirely.'
+    )
+    parser.add_argument(
+        '--l0-prefix-tier', type=str, default=None,
+        choices=['pickup', 'show', 'chop', 'full'],
+        help='Partner-responsiveness diagnostic. Replace the L0 with a scripted leader that '
+             'executes only a PREFIX of one recipe and then HOLDS that signal (NOOP) so the '
+             "ego's reaction can be observed. 'pickup' = pick the ingredient up and hold it "
+             "(fully reversible); 'show' = park it on the shared divider (fully reversible); "
+             "'chop' = chop it and park it (stronger signal, NOT reversible); 'full' = a "
+             'complete single-recipe L0, the positive control. No tier can plate or deliver, '
+             'so no delivery is expected except in the control.'
+    )
+    parser.add_argument(
+        '--l0-prefix-recipe', type=str, default=None,
+        choices=['R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
+        help='Which recipe the prefix probe proposes. Pair it with --l0-pair-type to label the '
+             "cell supported (inside the ego's capability set) or unsupported."
+    )
+    parser.add_argument(
+        '--probe-trace-path', type=str, default=None,
+        help='Path PREFIX for the per-step JSONL response trace (".pid<N>.jsonl" is appended, '
+             'one file per env worker). Records the ego partner-held ingredient, its chopped '
+             'flag, and divider contents every step.'
+    )
+    parser.add_argument(
+        '--probe-tag', type=str, default='',
+        help='Free-form label copied into every trace row (e.g. R1R2_seed1).'
+    )
+    parser.add_argument(
+        '--horizon-override', type=int, default=None,
+        help='override env horizon at eval time (Phase 0 / D2 tight horizons)'
+    )
     args = parser.parse_args()
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -261,6 +371,8 @@ def online_test(args, policy: LatentPolicy, test_pool):
         print('Inspecting policy', inspected_policy, end=', ')
         if args.env_name == 'Overcooked':
             print(test_pool[inspected_policy].ingredient_support_set)
+        elif args.env_name == 'LBF':
+            print(test_pool[inspected_policy].fruit_support_set)
         else:
             print(test_pool[inspected_policy].current_policies)
     args.history_use_episodes = True
@@ -334,8 +446,10 @@ def online_test(args, policy: LatentPolicy, test_pool):
         #     for pol in test_pool:
         #         pol.resample()
 
-        eval_info = evaluate(args, test_pool, args.test_episodes, envs, test_history, policy, None,
+        eval_out = evaluate(args, test_pool, args.test_episodes, envs, test_history, policy, None,
                              use_latent=args.latent_training, update_history=True, inspect_idx=inspected_policy)
+        # evaluate() returns (eval_info, recipe_pref_by_opponent)
+        eval_info = eval_out[0] if isinstance(eval_out, tuple) else eval_out
 
         for k in eval_info:
             if k not in all_eval_info:
@@ -371,14 +485,91 @@ if __name__ == '__main__':
         torch.backends.cudnn.deterministic = True
 
     if arg.env_name == 'Overcooked':
-        from environment.overcooked.policy import get_train_eval_pool
+        if getattr(arg, 'partner_policy_paths', None):
+            # Phase 0 / D2: bypass pool builders. Build pool directly from explicit paths.
+            from environment.overcooked.policy import PretrainedPolicy_test
+            partner_paths = [p.strip() for p in arg.partner_policy_paths.split(',') if p.strip()]
+            # 2026-10-17: honor the 6-recipe (FI) domain. PretrainedPolicy_test sizes its
+            # history buffer from obs_shape, which defaults to the 3-recipe width (73).
+            # With an FI partner that yields 73+6=79 fed into a 115+6=121 encoder and
+            # crashes with "mat1 and mat2 shapes cannot be multiplied (0x79 and 121x128)".
+            # Read recipe_domain from the env config; default keeps FC/PC behavior.
+            _partner_obs_shape = None
+            _partner_horizon = None
+            try:
+                import yaml as _yaml
+                with open(arg.env_config) as _f:
+                    _cfg = _yaml.safe_load(_f)
+                    # History buffer must hold a full episode when --feed-partner-history (e.g. FI H=80).
+                    _partner_horizon = _cfg.get('horizon')
+                    if _cfg.get('recipe_domain') in ('6recipe', '6recipe_x4'):
+                        from environment.overcooked.policy import OBS_SHAPE_6RECIPE
+                        _partner_obs_shape = OBS_SHAPE_6RECIPE
+                        print(f'Partner pool: 6recipe domain -> obs_shape={_partner_obs_shape}')
+            except Exception as _e:
+                print(f'Partner pool: could not read recipe_domain from {arg.env_config!r} ({_e}); '
+                      f'using default obs_shape')
+            built_pool = []
+            for pth in partner_paths:
+                built_pool.append(PretrainedPolicy_test(
+                    latent_training=True,
+                    history_size=arg.history_size,
+                    has_rew_done=arg.has_rew_done,
+                    has_meta_time_step=arg.has_meta_time_step,
+                    include_current_episode=arg.include_current_episode,
+                    merge_encoder_computation=arg.merge_encoder_computation,
+                    last_episode_only=arg.last_episode_only,
+                    pop_oldest_episode=arg.pop_oldest_episode,
+                    self_obs_mode=arg.self_obs_mode,
+                    model_path=pth,
+                    eval_history=True,
+                    agent_id=1 - arg.player_id,
+                    feed_history=getattr(arg, 'feed_partner_history', False),
+                    **({'max_episode_length': int(_partner_horizon)}
+                       if getattr(arg, 'feed_partner_history', False) and _partner_horizon else {}),
+                    **({'obs_shape': _partner_obs_shape} if _partner_obs_shape else {}),
+                ))
+            train_pol = built_pool
+            eval_pol = built_pool
+            arg.train_pool_size = len(built_pool)
+            print(f'Partner-paths pool: {len(built_pool)} L1 partners loaded')
+        elif getattr(arg, 'l0_pair_type', None):
+            # FI (6-recipe) rule-based L0 pool, mirroring train_.py's L1-training branch.
+            # get_train_eval_l0_pool_6recipe reads arg.l0_pair_type and arg.p.
+            from environment.overcooked.policy import get_train_eval_l0_pool_6recipe
+            print(f'Using 6-recipe L0 pool, pair_type={arg.l0_pair_type}, p={arg.p}')
+            train_pol, eval_pol = get_train_eval_l0_pool_6recipe(arg)
+            arg.train_pool_size = len(train_pol)
+        elif getattr(arg, 'null_opponent', False):
+            # Phase 0 / D1: bypass pool builders. Use NullPolicy stand-ins so the eval
+            # loop runs without needing the env-specific FCP plumbing.
+            from environment.overcooked.policy import NullPolicy
+            n = max(1, arg.train_pool_size or 1)
+            train_pol = [NullPolicy() for _ in range(n)]
+            eval_pol = train_pol
+            arg.train_pool_size = n
+        elif arg.use_l1_specialized:
+            from environment.overcooked.policy import get_train_eval_specialized_L1_pool
+            # get_train_eval_specialized_L1_pool reads args.latent_training directly.
+            if not hasattr(arg, 'latent_training'):
+                arg.latent_training = True
+            spec_train = arg.l1_specialized_train or arg.l1_specialized_eval
+            spec_eval = arg.l1_specialized_eval or arg.l1_specialized_train
+            train_pol, eval_pol = get_train_eval_specialized_L1_pool(arg, spec_train, spec_eval)
+        elif arg.use_l1_partners:
+            from environment.overcooked.policy import get_train_eval_level_1_pool
+            train_pol, eval_pol = get_train_eval_level_1_pool(arg)
+        else:
+            from environment.overcooked.policy import get_train_eval_pool
+            train_pol, eval_pol = get_train_eval_pool(arg)
     elif arg.env_name == 'KuhnPoker':
         from environment.kuhn_poker.policy_new import get_train_eval_pool
+        train_pol, eval_pol = get_train_eval_pool(arg)
     elif arg.env_name == 'MPE':
         from environment.mpe.policy_both import get_train_eval_pool
+        train_pol, eval_pol = get_train_eval_pool(arg)
     else:
         raise NotImplementedError
-    train_pol, eval_pol = get_train_eval_pool(arg)
 
     # Prepare and check peer ids
     if arg.env_name != 'MPE':
@@ -411,6 +602,8 @@ if __name__ == '__main__':
         test_pol = train_pol
     else:
         test_pol = eval_pol
+
+    # Phase 0 D1/D2: pools were already built upstream; nothing to override here.
     # test_pol = eval_pol
     # test_pol = [train_pol[1]]
 

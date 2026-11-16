@@ -86,16 +86,6 @@ To serve a dish the two agents have to complete the following sequence:
 The episode ends when a dish is delivered or when the horizon is reached. Which recipe
 is prepared is not given to the agents; they have to agree on it through their actions.
 
-**Plate mixing.** The plate accepts an ingredient according to the `plate_mixing`
-setting of the config (`gym_cooking/cooking_world/cooking_world.py`, `is_mixable`):
-
-- `legacy` (default): the six ingredients of the 3-recipe kitchen can be mixed with
-  each other in any combination; the six added for the 6-recipe kitchen accept only
-  their recipe partner. A plate never accepts the same ingredient twice.
-- `pair`: every ingredient accepts only its recipe partner, so a wrong second half is
-  refused and stays in the agent's hand. Used by the level-2 shaping config
-  `fc_small_6recipe_h80_b3c3_pair_c80_plate5.yaml`.
-
 ## Action space
 
 Six discrete actions: no-op (index 0), four moves (indices 1 to 4, which also set the
@@ -136,13 +126,6 @@ Both agents receive the same reward at every step (`cooking_zoo.py`, `accumulate
 
 The values are the `interact_reward`, `progress_reward`, `complete_reward`, and
 `step_cost` entries of the config.
-
-The level-2 shaping config for the 6-recipe kitchen (`..._b3c3_pair_c80_plate5.yaml`)
-keeps these terms and adds, for the ego seat only and once per ingredient type per
-episode: +3 for placing a raw ingredient on its own board (`board_placement_reward`),
-+3 for chopping it (`board_chop_reward`), +5 for the first chopped ingredient it plates
-(`plating_reward`), with the completion reward raised to 80 and `plate_mixing: pair`.
-The shaped seat follows the ego (`shaping_agent_idx`), also under `--both-sides`.
 
 ## Seats
 
@@ -208,11 +191,19 @@ the level-0 pool is built from `--pool-seed`, `--train-pool-size` and `--p`; wit
 | `config/fc_small_test_h80.yaml` | same kitchen, horizon 80 |
 | `config/fc_small_6recipe.yaml` | 6-recipe kitchen, horizon 40 |
 | `config/fc_small_6recipe_h80.yaml` | 6-recipe kitchen, horizon 80 (all 6-recipe level-1 training and evaluation) |
-| `config/fc_small_6recipe_h80_b3c3_pair_c80_plate5.yaml` | 6-recipe kitchen, horizon 80, level-2 shaping terms and pair mixing |
+| `config/fc_small_6recipe_h80_b3c3_pair_c80_plate5.yaml` | 6-recipe kitchen, horizon 80, used for level-2 training: `complete_reward: 80`, `board_placement_reward: 3`, `board_chop_reward: 3`, `plating_reward: 5`, `plate_mixing: pair` |
 
-Config keys: `mode` (level file name), `horizon`, `recipes`, `recipe_domain`
-(`3recipe` or `6recipe`), `obs_spaces`, `num_agents`, the four reward values, and the
-optional shaping keys. `--horizon` on the command line overrides the config value.
+Config keys: `mode` (level file name), `horizon`, `recipes`, `recipe_domain` (`3recipe` or
+`6recipe`), `obs_spaces`, `num_agents`, and the reward keys:
+
+| key | default | meaning |
+|---|---|---|
+| `interact_reward`, `progress_reward`, `complete_reward`, `step_cost` | 0.5, 1.0, 10.0, 0.2 | the reward terms above |
+| `board_placement_reward`, `board_chop_reward` | 0 | bonus for the ego seat, once per ingredient type per episode, for placing a raw ingredient on its own board and for chopping it |
+| `plating_reward` | 0 | bonus for the ego seat for its first plated ingredient of the episode |
+| `plate_mixing` | `legacy` | which ingredient the plate accepts on top of what it holds. `legacy`: the original gym_cooking table, where the six ingredients of the 3-recipe kitchen combine freely (a plate may hold a non-recipe pair) and the six added for the 6-recipe kitchen only accept their recipe partner. `pair`: every ingredient accepts only its recipe partner; a wrong one stays in the agent's hand. |
+
+`--horizon` on the command line overrides the config value.
 
 ## Rendering
 

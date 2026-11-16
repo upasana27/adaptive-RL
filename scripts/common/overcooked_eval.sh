@@ -14,6 +14,7 @@
 #                     PARTNER_BASE overrides the pool directory, PARTNER_PATHS a comma-separated list of checkpoints;
 #                     FEED_HISTORY (1) writes the partners' interaction history as in their training
 # Other    : TEST_PASS (10), TEST_EPISODES (5), EVAL_SEED (1), GPUS, MAXJOBS, ENV_CONFIG, EXTRA_ARGS, SMOKE
+#            SAVE_ROLLOUTS=1 also writes the per-step events of both agents to {run}.jsonl for the scripts in analysis/
 # Output   : logs/Overcooked/{DOMAIN}/{SIDE}/eval_vs_{MODE}/{METHOD}_{LEVEL}[_{TYPE}]_seed{N}_seat{s}.log
 #            The success rate is printed per run at the end (from the "Final result" line of each log).
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -79,7 +80,8 @@ for type in ${TYPES}; do
             throttle; gpu=$(next_gpu)
             name="${METHOD}_${LEVEL}${tname}_seed${seed}_seat${seat}"; log="${OUT}/${name}.log"; logs+=("${log}")
             echo "[$(date '+%F %T')] ${name}: ego ${ego} (GPU ${gpu})"
-            CUDA_VISIBLE_DEVICES=${gpu} python online_test_.py --env-name Overcooked --env_config "${ENV_CONFIG}" --algo ppo \
+            runner="online_test_.py"; [[ "${SAVE_ROLLOUTS:-0}" == 1 ]] && runner="analysis/collect_rollouts.py ${OUT}/${name}.jsonl"
+            CUDA_VISIBLE_DEVICES=${gpu} python ${runner} --env-name Overcooked --env_config "${ENV_CONFIG}" --algo ppo \
                 --exp-name "${EXP_PREFIX}${DOMAIN}/${SIDE}/eval_vs_${MODE}/${name}" --log-dir "${OUT}/ld_${name}" \
                 --player-id ${seat} --policy-dir "${ego}" --seed ${EVAL_SEED} \
                 --history-size ${TEST_EPISODES} --include-current-episode --merge-encoder-computation --use-meta-episode --self-obs-mode \

@@ -75,6 +75,7 @@ the suite used in the paper (`run_llm_heldout.sh` is the held-out-partner run).
 - `environment/overcooked/`: Overcooked environment, rule-based level-0 policies and partner-pool loaders (`policy.py`).
 - `environment/lbf/`: Level-Based Foraging.
 - `llm_agent/`, `eval_llm.py`: LLM ego agent and its evaluation harness.
+- `analysis/`: behaviour analysis of evaluation rollouts (waiting versus leading, recipe distribution, change across a round) and table statistics; see `analysis/README.md`.
 - `train_.py`: training entry point. `online_test_.py`: evaluation of trained checkpoints.
 - `baselines/`: the GSCU baseline (from PACE). Other baselines share the main codebase.
 

@@ -139,6 +139,8 @@ LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh
 
 The success rate of every run is printed at the end of each evaluation script and is on the
 `Final result` line of its log under `logs/Overcooked/FC/bothsides/eval_vs_L1/`.
+Adding `SAVE_ROLLOUTS=1` to an evaluation command also saves the per-step events of both
+agents for the behaviour analyses in [`analysis/`](../analysis/README.md).
 
 Variants:
 

@@ -1,4 +1,4 @@
-"""High-level skill controller for the LLM agent (ProAgent-style, added 2026-10-20).
+"""High-level skill controller for the LLM agent (ProAgent-style).
 
 Modeled on ProAgent (Zhang et al., AAAI 2024; github.com/PKU-Alignment/ProAgent):
   * the LLM picks ONE skill from a fixed set whose PRECONDITIONS are given as pseudo-code;

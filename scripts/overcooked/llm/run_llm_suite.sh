@@ -4,14 +4,14 @@ PACE_ROOT="${PACE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && git rev-parse -
 # unbuffered output (so a backgrounded run's log is readable while it runs).
 #
 # Usage:
-#   MODEL=qwen36-35b-a3b PASSES=3 setsid nohup bash scripts/overcooked/june_new_exp/llm/run_llm_suite.sh \
+#   MODEL=qwen36-35b-a3b PASSES=3 setsid nohup bash scripts/overcooked/llm/run_llm_suite.sh \
 #     > logs/Overcooked/llm_eval/_suite.log 2>&1 < /dev/null &
 #
 # Cost: each episode = horizon calls. H=80 x 5 ep x PASSES passes = 400*PASSES calls
 # per condition; at ~6 s/call that is ~40 min per pass per H=80 condition.
 source "${CONDA_SH:-$HOME/anaconda3/etc/profile.d/conda.sh}"
 conda activate "${CONDA_ENV:-pace}"
-source ~/.config/asu_gateway/env
+: "${LLM_BASE_URL:?set LLM_BASE_URL (OpenAI-compatible endpoint)}" "${LLM_API_KEY:?set LLM_API_KEY}"
 export PYTHONUNBUFFERED=1
 set -uo pipefail
 cd ${PACE_ROOT}
@@ -30,7 +30,7 @@ OUT=logs/Overcooked/llm_eval
 mkdir -p "$OUT"
 C6=environment/overcooked/config/fc_small_6recipe_h80.yaml
 C3=environment/overcooked/config/fc_small_test.yaml
-FIPOOL=${PACE_ROOT}/logs/Overcooked/june_new_exp/L1_FI_pace_p025_h80/right
+FIPOOL=${FIPOOL:-${PACE_ROOT}/logs/Overcooked/ppo_FI/right/L1/Ours}   # level-1 partner pool of the heterogeneous setting
 
 run () {   # name, then extra args
   local name=$1; shift

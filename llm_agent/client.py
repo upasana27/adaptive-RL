@@ -25,7 +25,7 @@ class ChatClient:
         self.timeout, self.max_retries = timeout, max_retries
         self.log_path = log_path
         # e.g. {"chat_template_kwargs": {"enable_thinking": False}} for Qwen3 models,
-        # whose native thinking loops until max_tokens on this task (2026-10-19 trace).
+        # whose native thinking loops until max_tokens on this task.
         self.default_extra_body = default_extra_body or {}
         self._lock = threading.Lock()
         # running accounting

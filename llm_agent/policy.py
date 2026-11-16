@@ -1,11 +1,11 @@
 """LLMPolicy — an LLM acting as one agent in the Overcooked gridworld.
 
 Interface-compatible with RuleBasedPolicy (set_id / reset / __call__(world) -> int action),
-plus round memory (2026-10-19): the driver calls start_round / start_episode /
+plus round memory: the driver calls start_round / start_episode /
 observe_step / end_episode so the LLM sees what happened earlier in the round, mirroring
 PACE's 5-episode history.
 
-Two action modes (2026-10-20):
+Two action modes:
   actions="low"  (default, unchanged): one LLM call per env step, reply = one of
                  left/right/up/down/interact/noop.
   actions="high": ProAgent-style skills (llm_agent/skills.py). The LLM is called only when a
@@ -55,7 +55,7 @@ class LLMPolicy:
     def _reset_skill_state(self):
         self._skill_hist = []        # ["t3 pickup(Tomato): done", ...]
         self._beliefs = []           # [(t, predicted partner skill)]            (ProAgent intention)
-        self._pbeliefs = []          # [(t, free-text belief about the partner)]  (added 2026-10-20, user:
+        self._pbeliefs = []          # [(t, free-text belief about the partner)]  (
                                      #  open-ended, per episode, echoed back like the intentions)
         self._partner_real = []      # [(t, observed partner event)]
         self._feedback = None

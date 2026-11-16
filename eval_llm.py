@@ -10,16 +10,15 @@ python eval_llm.py --model gemma4-31b-it --domain FI --l0-pair-type R1R2 \
     --env-config environment/overcooked/config/fc_small_6recipe_h80.yaml \
     --player-id 0 --test-pass 3 --test-episodes 5 --out-dir logs/Overcooked/llm_eval/demo
 
-# LLM vs an L1 neural partner (see WARNING below about the FI partner path)
-python eval_llm.py --model gemma4-31b-it --domain FI \
-    --partner-ckpt logs/.../L1_FI_pace_p0/right/R1R2/seed7/ppo/30000000.pt ...
+# LLM vs a level-1 neural partner
+python eval_llm.py --model <model> --domain FI --actions high --memory full \
+    --partner-ckpt logs/Overcooked/ppo_FI/right/L1/Ours/R1R2/seed16_seed16/ppo/30000000.pt ...
 
 Protocol: --test-pass rounds x --test-episodes episodes. The training regime is a
 5-episode meta-episode (history clears every 5), so --test-episodes 5 matches it.
 
-WARNING: neural L1 partners must be sanity-checked. Print the partner's action entropy
-(reported at the end): near log(6)=1.792 means it is acting at random and the run is
-meaningless (this exact bug bit the FI partner path in online_test_.py on 2026-10-17).
+Check at the end of a run: the partner's action entropy (near log(6)=1.792 means it acts at random, i.e. it
+was loaded incorrectly) and the number of failed or unparseable LLM calls (they fall back to no-op).
 """
 import argparse, json, os, sys, time
 from collections import Counter
@@ -100,7 +99,7 @@ def main():
                     help="low (default): one LLM call per env step, reply = a move. "
                          "high: ProAgent-style skills (pickup/chop/put_on_plate/place_on_counter/"
                          "pickup_plate/deliver/wait) executed by a controller; the LLM is called "
-                         "only when a skill completes or fails (llm_agent/skills.py, 2026-10-20).")
+                         "only when a skill completes or fails (llm_agent/skills.py).")
     args = ap.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -195,7 +194,7 @@ def main():
                 before = _snap(world)
                 # Insert in PLAYER-INDEX order: cooking_zoo applies actions by dict insertion order,
                 # not by key, so inserting player_{me} first swapped the two agents' actions whenever
-                # the LLM sat in seat 1 (found 2026-11-04: all seat-1 FC runs scored 0.0).
+                # the LLM sat in seat 1 (otherwise every seat-1 run scores 0).
                 acts_by_id = {me: a_me, them: a_them}
                 dec = Arrdict()
                 for pid in (0, 1):
@@ -207,7 +206,7 @@ def main():
                     # insert(), self_obs_mode): (its own obs_t, the OTHER agent's action_t) each step,
                     # then the terminal obs + finish_episode. PeriodicHistoryStorage clears it every
                     # history_size (=5) episodes, and partner.reset() runs once per pass (= 5 episodes).
-                    # Nothing in the codebase did this before 2026-10-19: without it the FC L1 pool scores
+                    # Without it the FC L1 pool scores
                     # 0.00 with its own L0 training partners; with it 0.8-1.0.
                     import torch as _t
                     partner.history.add(0, _t.as_tensor(o_them).float().cuda(), _t.tensor(a_me).cuda(), None)

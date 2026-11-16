@@ -144,7 +144,7 @@ def describe(world, me_id, recipes, horizon, t, last_partner_action=None, header
     # --- layout (same grid as the level json) + side facts ---
     L.append(f"MAP ({world.width} wide x {world.height} tall; x grows RIGHT, y grows DOWN):")
     L.append(render_map(world, me_id))
-    # sides(world, me_id) (YOUR SIDE / DELIVERY / DIVIDER lines) removed from the prompt 2026-10-19 per user.
+    # sides(world, me_id) (YOUR SIDE / DELIVERY / DIVIDER lines) are not part of the prompt.
 
     # --- me ---
     face = target_of(me.location, getattr(me, "orientation", 1))
@@ -227,7 +227,7 @@ def _reachable(world, start):
 def affordances(world, me_id, max_items=14):
     """For each interactable I can actually REACH: the cell to stand on + facing needed.
 
-    Fixed 2026-10-19: the old version listed every object on the map (including the
+    Note: an earlier version listed every object on the map (including the
     partner's side, behind the divider) with Manhattan distances, and for divider items
     (e.g. the Plate) it could pick a stand cell on the PARTNER's side. Now only stand
     cells in my BFS-reachable floor region are used, and distance is true walking steps.
@@ -317,7 +317,7 @@ SYSTEM_PROMPT = system_prompt()
 
 
 # ---------------------------------------------------------------------------------
-# HIGH-LEVEL (skill) mode, ProAgent-style — added 2026-10-20. See llm_agent/skills.py.
+# HIGH-LEVEL (skill) mode, ProAgent-style. See llm_agent/skills.py.
 # Same game rules as the low-level prompt; the ACTIONS/INTERACT sections are replaced by
 # the skill set with its preconditions written as pseudo-code (ProAgent's convention), and
 # the reply format is ProAgent's Analysis / Intention / Plan. No strategy demos (hints).
@@ -369,7 +369,7 @@ def describe_high(world, me_id, recipes, horizon, t, header=None, memory_text=No
                   skill_history=None, belief_text=None, feedback=None):
     """State text for skill mode: map + state (coordinates only), recipes, this episode's skill
     history, belief block (ProAgent), round memory, and the last failure feedback if any.
-    2026-10-20 (user decision): no '(side: ...)' tags — which side a thing is on is left for the
+    No '(side: ...)' tags — which side a thing is on is left for the
     model to read off the map; a wrong guess is answered by the controller's assertion feedback."""
     me = world.agents[me_id]
     other = world.agents[1 - me_id]

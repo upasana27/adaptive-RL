@@ -1,4 +1,4 @@
-"""Round memory for the LLM agent (added 2026-10-19).
+"""Round memory for the LLM agent.
 
 Mirrors PACE's history regime: a ROUND is `episodes_per_round` (=5) episodes with the same
 partner; memory accumulates across the round and is cleared when a new round starts

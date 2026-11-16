@@ -3,9 +3,6 @@
 Ground truth: environment/overcooked/gym_cooking/cooking_world/cooking_world.py:54
     AGENT_ACTIONS: 0: Noop, 1: Left, 2: Right, 3: Down, 4: Up, 5: Interact
 
-WARNING: scripts/overcooked/june_new_exp/analysis/left/analyze_L2_PC_trajectories.py
-uses {1:up, 2:down, 3:left, 4:right}, which is WRONG for this env. Use this module.
-
 Movement semantics (cooking_world.perform_agent_action):
   * actions 1-4 set the agent's orientation AND attempt to walk one cell.
   * action 5 interacts with the cell the agent currently FACES (its orientation),

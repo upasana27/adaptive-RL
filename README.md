@@ -1,32 +1,101 @@
-# NestRL: Nested Training for Peer Adaptation
+# NestRL: A Nested Training Regime for Mutual Adaptation in Human-AI Teaming
 
-Code for the NeurIPS 2026 submission. The repository extends the PACE codebase
-(see Acknowledgements) with the nested training regime, the heterogeneous-partner
-Overcooked domain, the Level-Based Foraging domain, and the LLM-agent evaluation.
+Official code for the paper
+
+> **NestRL: A Nested Training Regime for Mutual Adaptation in Human-AI Teaming**
+> Upasana Biswas, Durgesh Kalwar, Subbarao Kambhampati, Sarath Sreedharan
+> NeurIPS 2026. [arXiv:2602.17737](https://arxiv.org/abs/2602.17737)
+
+NestRL trains an agent to coordinate with partners that adapt to it. Agents are trained in
+levels: each level is trained against a pool of adaptive agents from the level below, and is
+evaluated with held-out adaptive partners it has never interacted with. This repository
+contains the training regime, the Overcooked and Level-Based Foraging environments, the
+baselines, the evaluation of LLM agents, and the behaviour analysis.
+
+## Contents
+
+| path | content | documentation |
+|---|---|---|
+| `scripts/` | launch scripts for training and evaluation, one folder per setting and seat | [scripts/README.md](scripts/README.md) |
+| `environment/` | Overcooked (3-recipe and 6-recipe kitchens) and Level-Based Foraging | [environment/README.md](environment/README.md) |
+| `analysis/` | behaviour analysis of evaluation rollouts and table statistics | [analysis/README.md](analysis/README.md) |
+| `llm_agent/`, `eval_llm.py` | LLM ego agent and its evaluation | [llm_agent/README.md](llm_agent/README.md) |
+| `learning/` | models, interaction-history buffer and PPO | |
+| `train_.py`, `online_test_.py` | training and evaluation entry points called by the scripts | |
+| `baselines/` | the GSCU baseline of the PACE codebase | |
 
 ## Installation
 
-See `install.sh` (run the lines one at a time). The scripts assume a conda
-environment named `pace`; set `CONDA_ENV` to use a different name and `CONDA_SH`
-if conda is not installed under `$HOME/anaconda3`.
+Requirements: Linux, [conda](https://docs.conda.io), and a CUDA-capable GPU (training on CPU
+is possible but slow). From the repository root:
 
-All default checkpoint locations are resolved relative to the repository root.
-Set `PACE_ROOT` to override this (for example when checkpoints live elsewhere).
-Weights & Biases logging is off unless `WANDB_USER` is set.
+```bash
+# 1. environment (the pinned setuptools and wheel are needed to build gym 0.21)
+conda create -n pace python=3.8 setuptools=65.6.3
+conda activate pace
+
+# 2. PyTorch: pick the build for your CUDA version (https://pytorch.org)
+conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
+
+# 3. dependencies
+conda install scikit-learn==1.0.2 -c conda-forge
+pip install wheel==0.38.4 PettingZoo==1.9.0 pygame==2.0.1 wandb==0.14.0 tqdm==4.65.0 \
+    stable-baselines3==1.7.0 seaborn==0.13.0 pyglet==1.5.27 scipy pyyaml
+
+# 4. the Overcooked environment, in editable mode
+pip install -e environment/overcooked/gym_cooking/rebar
+pip install -e environment/overcooked
+```
+
+The same commands are in `install.sh`. To check the installation, run a short training job
+(24k environment steps, about two minutes):
+
+```bash
+SMOKE=1 SEEDS=1 bash scripts/overcooked/FC/bothsides/train_L1.sh
+```
+
+It should end with `all level-1 runs finished` and leave a checkpoint under
+`logs/Overcooked/ppo_smoke_FC/bothsides/L1/Ours/seed1_seed1/ppo/`.
+
+The launch scripts read a few environment variables:
+
+| variable | default | meaning |
+|---|---|---|
+| `CONDA_ENV` | `pace` | conda environment the scripts activate |
+| `CONDA_SH` | `$HOME/anaconda3/etc/profile.d/conda.sh` | location of conda's shell setup |
+| `PACE_ROOT` | the repository root | root for `logs/` and checkpoint lookup |
+| `WANDB_USER` | unset | Weights & Biases entity; logging is off when unset |
+| `GPUS`, `MAXJOBS` | `0`, 3 to 4 | GPUs used round-robin and concurrent runs per script |
+
+## Quick start
+
+The full sequence for the homogeneous Overcooked setting, with one agent trained for both
+seats (details and all options in [scripts/README.md](scripts/README.md)):
+
+```bash
+bash scripts/overcooked/FC/bothsides/train_L1.sh                    # level-1 partner pool
+LEVEL=L1 SEEDS="$(seq -s ' ' 1 25)" bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh   # verify the pool
+bash scripts/overcooked/FC/bothsides/train_baselines.sh             # baselines
+bash scripts/overcooked/FC/bothsides/train_L2.sh                    # level-2 agent (NestRL)
+LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L1.sh  # held-out adaptive partners
+LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh  # level-0 partners
+```
+
+Level-1 runs take 30M environment steps and level-2 runs 60M; use `SEEDS`, `GPUS` and
+`MAXJOBS` to fit the runs to your hardware.
 
 ## Training regime
 
 Three levels of partners are trained in sequence, each level only against the
 previous one (no mixing):
 
-- **Level 0**: rule-based, deterministic partners, one recipe (or fruit type) each.
+- **Level 0**: rule-based partners, each specialised in one recipe (or item type).
 - **Level 1**: PPO against the level-0 pool.
 - **Level 2**: PPO against a pool of level-1 seeds. Held-out level-1 seeds are
   used for evaluation.
 
-Every method (ours, PACE with the peer-identification head, LiAM, LiAMx, LiLi,
-Generalist) is run through the same regime with its own architecture: a method's
-level-2 agent is trained against level-1 agents of the same method.
+Every method can be run through the same regime with its own architecture: a method's
+level-2 agent is trained against level-1 agents of the same method (`METHOD` in the scripts).
 
 ## Overcooked
 
@@ -69,19 +138,22 @@ per-round memory (`--memory full`). Any OpenAI-compatible chat endpoint works:
 set `LLM_BASE_URL` and `LLM_API_KEY`. `scripts/overcooked/llm/` has
 the launch scripts (`run_llm_heldout.sh` is the held-out-partner run).
 
-## Code structure
+## Citation
 
-- `learning/`: context buffer, models (latent encoder, recurrent policies, auxiliary heads) and PPO.
-- `environment/overcooked/`: Overcooked environment, rule-based level-0 policies and partner-pool loaders (`policy.py`).
-- `environment/lbf/`: Level-Based Foraging.
-- `llm_agent/`, `eval_llm.py`: LLM ego agent and its evaluation harness.
-- `analysis/`: behaviour analysis of evaluation rollouts (waiting versus leading, recipe distribution, change across a round) and table statistics; see `analysis/README.md`.
-- `train_.py`: training entry point. `online_test_.py`: evaluation of trained checkpoints.
-- `baselines/`: the GSCU baseline (from PACE). Other baselines share the main codebase.
+```bibtex
+@inproceedings{biswas2026nestrl,
+  title     = {NestRL: A Nested Training Regime for Mutual Adaptation in Human-AI Teaming},
+  author    = {Biswas, Upasana and Kalwar, Durgesh and Kambhampati, Subbarao and Sreedharan, Sarath},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026},
+  eprint    = {2602.17737},
+  archivePrefix = {arXiv}
+}
+```
 
 ## Acknowledgements
 
-This repository is built upon the following projects. We sincerely thank their authors.
+This repository builds on the PACE codebase and on the following projects. We thank their authors.
 
 - PACE: https://github.com/linkct/PACE
 - PPO: https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail

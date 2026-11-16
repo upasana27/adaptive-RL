@@ -111,23 +111,29 @@ during level-2 training (the periodic evaluation in the training log), and 10 he
 partners never seen during training, used by `eval_method_vs_L1.sh`.
 
 The whole regime for our method in the homogeneous setting with a both-sides ego, from
-nothing to the numbers, is the following sequence (each step waits for the previous one):
+nothing to the numbers, is the following sequence (each step waits for the previous one).
+Step 2 verifies the partners before they are used: a level-1 partner that does not reach a high
+success rate with its level-0 partners, or that learned only one recipe of its type, should be
+left out of the pool.
 
 ```bash
 # 1. level-1 partner pool: 25 partners against the level-0 partners (P=0.25), 30M steps each
 GPUS="0 1 2 3" MAXJOBS=8 bash scripts/overcooked/FC/bothsides/train_L1.sh
 
-# 2. comparison egos: each baseline against the level-0 partners, 5 seeds each
+# 2. check the pool: every level-1 partner against the level-0 partners it was trained with
+LEVEL=L1 SEEDS="$(seq -s ' ' 1 25)" bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh
+
+# 3. comparison egos: each baseline against the level-0 partners, 5 seeds each
 GPUS="0 1 2 3" MAXJOBS=8 bash scripts/overcooked/FC/bothsides/train_baselines.sh
 
-# 3. level 2 of our method against the 10 training partners, 5 seeds, 60M steps each
+# 4. level 2 of our method against the 10 training partners, 5 seeds, 60M steps each
 GPUS="0 1 2 3" MAXJOBS=5 bash scripts/overcooked/FC/bothsides/train_L2.sh
 
-# 4. evaluation against the 10 held-out partners (10 rounds x 5 episodes, both seats)
+# 5. evaluation against the 10 held-out partners (10 rounds x 5 episodes, both seats)
 LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L1.sh
 LEVEL=L1 METHOD=Generalist EGO_BASE=logs/Overcooked/ppo_FC/bothsides/L1/Generalist \
     PARTNER_METHOD=Ours bash scripts/overcooked/FC/bothsides/eval_method_vs_L1.sh   # one baseline ego vs the same partners
-# 5. evaluation against the level-0 partners
+# 6. evaluation of the level-2 agents against the level-0 partners
 LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh
 ```
 

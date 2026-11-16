@@ -61,9 +61,9 @@ Both agents receive the same reward: +10 when an item is collected
 `align_reward` term (bonus when both agents are next to an item within
 `align_window` steps of each other); it is 0 in every experiment.
 
-## Rule-based level-0 partners
+## Rule-based Level-0 partners
 
-`policy.py`, class `LBFRuleBasedPolicy`. A level-0 partner is assigned one item type
+`policy.py`, class `LBFRuleBasedPolicy`. A Level-0 partner is assigned one item type
 and ignores the other items. At every step it
 
 1. finds the nearest uncollected item of its type (Manhattan distance), or does
@@ -75,10 +75,10 @@ Two optional noise knobs: `nav_p` (probability of preferring the horizontal move
 `rand_p` (probability of a random move instead of the planned one). The pools in the
 scripts use `--p 0` by default, so the partners are deterministic.
 
-The level-0 pool (`get_train_eval_pool`) has one partner per type:
+The Level-0 pool (`get_train_eval_pool`) has one partner per type:
 `--train-pool-size 3 --eval-pool-size 3` with `--lbf-num-fruit-types 3`.
 
-## Pretrained level-1 partners
+## Pretrained Level-1 partners
 
 Level-1 checkpoints are loaded with `get_train_eval_l1_pool_lbf` through the same
 flags as the Overcooked recipe-subset loader:
@@ -92,8 +92,8 @@ directory (`--l1-specialized-base-dir`, default `logs/LBF/ppo_june_new_exp` unde
 repository root; the release scripts pass `logs/LBF/ppo_LBF/{side}/L1`). The checkpoint is
 `{base}/{TAG}/seed{N}_seed{N}/ppo/` (or `seed{N}/ppo/`) with `latest.pt`, `30000000.pt` or
 `individual_latest.pt`. `--lbf-horizon 80` sets the length of the partner's history buffer and
-must match `--horizon`. `--lbf-l1-eval-spec` adds level-1 partners to the evaluation pool of a
-run that trains against level-0 partners.
+must match `--horizon`. `--lbf-l1-eval-spec` adds Level-1 partners to the evaluation pool of a
+run that trains against Level-0 partners.
 
 ## Configuration files
 

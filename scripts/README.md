@@ -6,16 +6,16 @@ runs every (domain, seat, method) combination.
 
 ## Partner settings: FC, PC, FI
 
-The three Overcooked folders are named after the kind of level-1 partner pool the ego agent
+The three Overcooked folders are named after the kind of Level-1 partner pool the ego agent
 faces. "Compatible" refers to the recipes the partners can prepare.
 
-| code | name | kitchen | level-1 partner pool |
+| code | name | kitchen | Level-1 partner pool |
 |---|---|---|---|
-| **FC** | Fully Compatible | 3-recipe, horizon 40 | every partner was trained against all three level-0 recipes and can prepare any of them. The *homogeneous* setting. |
-| **PC** | Partially Compatible | 3-recipe, horizon 40 | each partner was trained against two of the three level-0 recipes; three partner types `LO_PB`, `LO_TC`, `PB_TC` (Lettuce-Onion, Potato-Broccoli, Tomato-Carrot), which overlap pairwise. |
-| **FI** | Fully Incompatible | 6-recipe, horizon 80 | each partner was trained against the two level-0 recipes of one ingredient-disjoint type `R1R2`, `R3R4`, `R5R6`; partners of different types share no recipe. The *heterogeneous* setting. |
+| **FC** | Fully Compatible | 3-recipe, horizon 40 | every partner was trained against all three Level-0 recipes and can prepare any of them. The *homogeneous* setting. |
+| **PC** | Partially Compatible | 3-recipe, horizon 40 | each partner was trained against two of the three Level-0 recipes; three partner types `LO_PB`, `LO_TC`, `PB_TC` (Lettuce-Onion, Potato-Broccoli, Tomato-Carrot), which overlap pairwise. |
+| **FI** | Fully Incompatible | 6-recipe, horizon 80 | each partner was trained against the two Level-0 recipes of one ingredient-disjoint type `R1R2`, `R3R4`, `R5R6`; partners of different types share no recipe. The *heterogeneous* setting. |
 
-`lbf/` is Level-Based Foraging (three item types; every level-1 partner can collect any item,
+`lbf/` is Level-Based Foraging (three item types; every Level-1 partner can collect any item,
 so it corresponds to FC).
 
 ## Layout
@@ -24,16 +24,16 @@ so it corresponds to FC).
 scripts/
   common/                      shared implementations (read these for the full list of variables)
     lib.sh                     environment, method flags, checkpoint lookup, GPU/concurrency helpers
-    overcooked_train_L1.sh     level-1 and baseline training vs level-0
-    overcooked_train_L2.sh     level-2 training vs a level-1 pool
-    overcooked_eval.sh         evaluation vs level-0 (MODE=L0) or held-out level-1 (MODE=L1)
+    overcooked_train_L1.sh     Level-1 and baseline training vs Level-0
+    overcooked_train_L2.sh     Level-2 training vs a Level-1 pool
+    overcooked_eval.sh         evaluation vs Level-0 (MODE=L0) or held-out Level-1 (MODE=L1)
     lbf_train_L1.sh  lbf_train_L2.sh
   overcooked/{FC,PC,FI}/{left,right,bothsides}/
-    train_L1.sh                level-1 partner pool of METHOD (default Ours) vs level-0 (default seeds 1-25)
-    train_baselines.sh         comparison egos: PACE, LiAM, LiAMx, LiLi, Generalist vs level-0 (default seeds 1-5)
-    train_L2.sh                level 2 of METHOD vs its own level-1 pool (default seeds 1-5)
-    eval_method_vs_L0.sh       any trained agent vs the level-0 partners
-    eval_method_vs_L1.sh       any trained agent vs held-out level-1 partners
+    train_L1.sh                Level-1 partner pool of METHOD (default Ours) vs Level-0 (default seeds 1-25)
+    train_baselines.sh         comparison egos: PACE, LiAM, LiAMx, LiLi, Generalist vs Level-0 (default seeds 1-5)
+    train_L2.sh                Level-2 of METHOD vs its own Level-1 pool (default seeds 1-5)
+    eval_method_vs_L0.sh       any trained agent vs the Level-0 partners
+    eval_method_vs_L1.sh       any trained agent vs held-out Level-1 partners
   overcooked/llm/              LLM ego agent evaluation (run_llm_suite.sh, run_llm_heldout.sh)
   lbf/{left,right,bothsides}/  train_L1.sh  train_baselines.sh  train_L2.sh
 ```
@@ -68,14 +68,14 @@ SEEDS="1 2 3" GPUS="0 1" bash scripts/overcooked/FC/bothsides/train_L1.sh
 | variable | meaning |
 |---|---|
 | `SEEDS` or `N_SEEDS` | seed list, or the first N seeds |
-| `METHOD` / `METHODS` | method for level-2 and evaluation scripts / list for level-1 scripts |
+| `METHOD` / `METHODS` | method for Level-2 and evaluation scripts / list for Level-1 scripts |
 | `TYPES` | partner types to train (PC: `LO_PB LO_TC PB_TC`, FI: `R1R2 R3R4 R5R6`; `ALL` trains an FI agent against all six recipes) |
 | `GPUS`, `MAXJOBS` | GPUs used round-robin, maximum concurrent runs per script |
-| `P` | level-0 partner noise (default 0.25 in Overcooked, 0 in LBF) |
+| `P` | Level-0 partner noise (default 0.25 in Overcooked, 0 in LBF) |
 | `NUM_ENV_STEPS`, `LR`, `ENV_CONFIG`, `EXTRA_ARGS` | overrides of the defaults above |
-| `L1_BASE_DIR`, `TRAIN_SEEDS`/`EVAL_SEEDS` (FC), `TRAIN_SPEC`/`EVAL_SPEC` (PC, FI, LBF) | level-1 pool for level-2 training; spec format `TYPE:1,2,3;TYPE:1,2,3` |
+| `L1_BASE_DIR`, `TRAIN_SEEDS`/`EVAL_SEEDS` (FC), `TRAIN_SPEC`/`EVAL_SPEC` (PC, FI, LBF) | Level-1 pool for Level-2 training; spec format `TYPE:1,2,3;TYPE:1,2,3` |
 | `LEVEL`, `TYPES`, `EGO_BASE`, `PARTNER_METHOD`, `PARTNER_SEEDS`/`PARTNER_SPEC`, `TEST_PASS`, `TEST_EPISODES` | evaluation: which agent, which partners (default: the same method's held-out partners), protocol (default 10 rounds x 5 episodes) |
-| `FEED_HISTORY` | write the level-1 partners' interaction history during level-2 training and evaluation as in their own training (default on; off in PC) |
+| `FEED_HISTORY` | write the Level-1 partners' interaction history during Level-2 training and evaluation as in their own training (default on; off in PC) |
 | `PACE_ROOT`, `CONDA_SH`, `CONDA_ENV`, `WANDB_USER` | machine setup, see the top-level README |
 | `SMOKE=1` | 24k-step run to check that a script launches |
 
@@ -87,47 +87,47 @@ SEEDS="1 2 3" GPUS="0 1" bash scripts/overcooked/FC/bothsides/train_L1.sh
 ```
 logs/Overcooked/ppo_FC/bothsides/L1/Ours/seed3_seed3/ppo/30000000.pt     checkpoints (every 5M steps, latest.pt or individual_latest.pt)
 logs/Overcooked/FC/bothsides/L1/Ours/seed3.log                           training log
-logs/Overcooked/FI/left/L2/Ours/seed1.log                                level 2
+logs/Overcooked/FI/left/L2/Ours/seed1.log                                Level-2
 logs/Overcooked/FC/bothsides/eval_vs_L1/Ours_L2_seed1_seat0.log          evaluation ("Final result" line = success rate)
 logs/LBF/ppo_LBF/right/L1/Ours/seed1_seed1/ppo/                          LBF
 ```
 
-The level-2 and evaluation scripts find the partner pool from this layout (the pool of the
+The Level-2 and evaluation scripts find the partner pool from this layout (the pool of the
 same method on the partner side), so the three stages chain without arguments. Set
 `L1_BASE_DIR` (or `PARTNER_BASE`) to use a pool stored elsewhere. Every loader accepts the
 final numbered checkpoint, `latest.pt` or `individual_latest.pt`.
 
 ## Run-through
 
-Each level-1 pool (per type in PC and FI) consists of three disjoint groups of partners,
-trained with independent seeds: 10 training partners of level 2, 5 evaluation partners used
-during level-2 training (the periodic evaluation in the training log), and 10 held-out
+Each Level-1 pool (per type in PC and FI) consists of three disjoint groups of partners,
+trained with independent seeds: 10 training partners of Level-2, 5 evaluation partners used
+during Level-2 training (the periodic evaluation in the training log), and 10 held-out
 partners never seen during training, used by `eval_method_vs_L1.sh`.
 
 The whole regime for our method in the homogeneous setting with a both-sides ego, from
 nothing to the numbers, is the following sequence (each step waits for the previous one).
-Step 2 verifies the partners before they are used: a level-1 partner that does not reach a high
-success rate with its level-0 partners, or that learned only one recipe of its type, should be
+Step 2 verifies the partners before they are used: a Level-1 partner that does not reach a high
+success rate with its Level-0 partners, or that learned only one recipe of its type, should be
 left out of the pool.
 
 ```bash
-# 1. level-1 partner pool: 25 partners against the level-0 partners (P=0.25), 30M steps each
+# 1. Level-1 partner pool: 25 partners against the Level-0 partners (P=0.25), 30M steps each
 GPUS="0 1 2 3" MAXJOBS=8 bash scripts/overcooked/FC/bothsides/train_L1.sh
 
-# 2. check the pool: every level-1 partner against the level-0 partners it was trained with
+# 2. check the pool: every Level-1 partner against the Level-0 partners it was trained with
 LEVEL=L1 SEEDS="$(seq -s ' ' 1 25)" bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh
 
-# 3. comparison egos: each baseline against the level-0 partners, 5 seeds each
+# 3. comparison egos: each baseline against the Level-0 partners, 5 seeds each
 GPUS="0 1 2 3" MAXJOBS=8 bash scripts/overcooked/FC/bothsides/train_baselines.sh
 
-# 4. level 2 of our method against the 10 training partners, 5 seeds, 60M steps each
+# 4. Level-2 of our method against the 10 training partners, 5 seeds, 60M steps each
 GPUS="0 1 2 3" MAXJOBS=5 bash scripts/overcooked/FC/bothsides/train_L2.sh
 
 # 5. evaluation against the 10 held-out partners (10 rounds x 5 episodes, both seats)
 LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L1.sh
 LEVEL=L1 METHOD=Generalist EGO_BASE=logs/Overcooked/ppo_FC/bothsides/L1/Generalist \
     PARTNER_METHOD=Ours bash scripts/overcooked/FC/bothsides/eval_method_vs_L1.sh   # one baseline ego vs the same partners
-# 6. evaluation of the level-2 agents against the level-0 partners
+# 6. evaluation of the Level-2 agents against the Level-0 partners
 LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh
 ```
 
@@ -142,9 +142,9 @@ Variants:
   `left/train_L2.sh`; the evaluation scripts in `left/` find the right-side pool. The opposite
   for a right-seat ego.
 - **Setting.** Replace `FC` by `PC` or `FI`; `train_L1.sh` then trains the pool per partner
-  type (`TYPES`), 25 partners each, and the level-2 and evaluation scripts use all types.
+  type (`TYPES`), 25 partners each, and the Level-2 and evaluation scripts use all types.
 - **Nested regime of a baseline.** `METHOD=LiAM bash .../train_L1.sh` trains LiAM's own pool,
-  `METHOD=LiAM bash .../train_L2.sh` its level 2, and `METHOD=LiAM LEVEL=L2 bash
+  `METHOD=LiAM bash .../train_L2.sh` its Level-2, and `METHOD=LiAM LEVEL=L2 bash
   .../eval_method_vs_L1.sh` evaluates it against LiAM's held-out partners (method matched).
 - **LBF.** `scripts/lbf/{side}/train_L1.sh`, `train_baselines.sh`, `train_L2.sh` with the same
   variables. There is no separate evaluation script: the held-out numbers are the
@@ -156,6 +156,6 @@ Variants:
 ## LLM agents
 
 `overcooked/llm/run_llm_heldout.sh` runs an LLM ego (`eval_llm.py`, high-level skills, per-round
-memory) against the held-out level-1 partners with the 10 x 5 protocol; `run_llm_suite.sh` is
+memory) against the held-out Level-1 partners with the 10 x 5 protocol; `run_llm_suite.sh` is
 the broader model survey. Both need `LLM_BASE_URL` and `LLM_API_KEY` for an OpenAI-compatible
 endpoint and take the partner checkpoints from the paths set at the top of the script.

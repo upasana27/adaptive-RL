@@ -1,7 +1,7 @@
 # LLM ego agent
 
 `eval_llm.py` (repository root) evaluates a large language model as the ego agent in
-Overcooked, paired with the same rule-based level-0 and trained level-1 partners as the
+Overcooked, paired with the same rule-based Level-0 and trained Level-1 partners as the
 learning agents and with the same protocol. The modules here turn the game into text, call
 the model, and execute its decisions.
 
@@ -51,21 +51,21 @@ Any OpenAI-compatible chat-completions endpoint works:
 ```bash
 export LLM_BASE_URL=https://.../v1  LLM_API_KEY=...
 
-# one run: the model in the left seat against one held-out level-1 partner, 10 rounds x 5 episodes
+# one run: the model in the left seat against one held-out Level-1 partner, 10 rounds x 5 episodes
 python eval_llm.py --model <model id> --domain FC --actions high --memory full \
     --env-config environment/overcooked/config/fc_small_test.yaml --player-id 0 \
     --partner-ckpt logs/Overcooked/ppo_FC/bothsides/L1/Ours/seed16_seed16/ppo/30000000.pt \
     --test-pass 10 --test-episodes 5 --out-dir logs/Overcooked/llm_eval/demo
 
-# against a level-0 partner instead of --partner-ckpt: --l0-pair-type R1 --p 0.25
+# against a Level-0 partner instead of --partner-ckpt: --l0-pair-type R1 --p 0.25
 #   (a recipe R1..R6, or a type R1R2 / R3R4 / R5R6 with --l0-index 0|1 to choose the recipe of the type)
 ```
 
 `scripts/overcooked/llm/run_llm_heldout.sh` runs the default evaluation: the model against
-every held-out level-1 partner, both seats in the homogeneous setting (FC) and the left seat
+every held-out Level-1 partner, both seats in the homogeneous setting (FC) and the left seat
 in the heterogeneous setting (FI, horizon 80). `MODEL`, `FC_POOL`, `FI_POOL`, `FC_SEEDS` and
 `FI_PARTNERS` select the model and the partners. `run_llm_suite.sh` is a shorter survey
-(level-0 and level-1 partners) for trying a new model.
+(Level-0 and Level-1 partners) for trying a new model.
 
 Main arguments of `eval_llm.py`:
 
@@ -73,7 +73,7 @@ Main arguments of `eval_llm.py`:
 |---|---|
 | `--model`, `--temperature` (0), `--max-tokens`, `--timeout` | model and call settings |
 | `--domain FC \| FI`, `--env-config`, `--player-id` | setting, kitchen config, seat of the model |
-| `--partner-ckpt` or `--l0-pair-type`, `--l0-index`, `--p` | level-1 checkpoint, or the level-0 partner and its noise |
+| `--partner-ckpt` or `--l0-pair-type`, `--l0-index`, `--p` | Level-1 checkpoint, or the Level-0 partner and its noise |
 | `--test-pass`, `--test-episodes` | rounds and episodes per round |
 | `--actions`, `--memory`, `--plan-len`, `--reason`, `--no-think` | interface and prompt options |
 | `--out-dir`, `--trace-file` | output directory; optional file with every prompt, reply, action and resulting state |
@@ -85,5 +85,5 @@ distributions of both agents and the call statistics. Check two things before us
 
 - **Failed or unparseable calls** (`llm.failures`, `llm.unparseable`). They fall back to
   doing nothing, so a run with many of them measures the endpoint, not the model.
-- **Partner action entropy.** A value near `log 6 = 1.79` for a level-1 partner means it is
+- **Partner action entropy.** A value near `log 6 = 1.79` for a Level-1 partner means it is
   acting at random, i.e. the checkpoint was loaded with the wrong configuration.

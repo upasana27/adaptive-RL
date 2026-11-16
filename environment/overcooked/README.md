@@ -134,9 +134,9 @@ takes the other seat. With `--both-sides` the ego seat alternates across the par
 environment processes (even processes left, odd processes right), so one network is
 trained for both seats. Only the right seat can deliver.
 
-## Rule-based level-0 partners
+## Rule-based Level-0 partners
 
-`policy.py`, class `RuleBasedPolicy`. A level-0 partner knows exactly one recipe. Its
+`policy.py`, class `RuleBasedPolicy`. A Level-0 partner knows exactly one recipe. Its
 behaviour is a list of events (take or put a given object at a given station, chop)
 restricted to its two ingredients and the plate. At each step:
 
@@ -161,12 +161,12 @@ of replacing the planned action by a random move, never an interact).
 
 The scripts use `p = 0.25` by default. `--p 0` gives deterministic partners.
 
-## Pretrained level-1 partners
+## Pretrained Level-1 partners
 
 Level-1 partners are frozen checkpoints wrapped in `PretrainedPolicy_test`
 (`policy.py`). The wrapper runs the partner's own network on its own observation and
 keeps the partner's interaction history buffer (5 episodes). With
-`--feed-partner-history` the buffer is written during level-2 training and
+`--feed-partner-history` the buffer is written during Level-2 training and
 evaluation exactly as during the partner's own training; without it the partner acts
 on an empty history.
 
@@ -179,19 +179,19 @@ repository root, override with the flag in the last column or set `PACE_ROOT`):
 | 6-recipe | `--use-l1-disjoint --l1-disjoint-train "R1R2:1,2;R3R4:1,2;R5R6:1,2" --l1-disjoint-eval "..."` | `TYPE:seeds;TYPE:seeds` | `{base}/{TYPE}/seed{N}/ppo/30000000.pt` | `--l1-disjoint-base-dir` |
 | recipe-subset (PC) | `--use-l1-specialized --l1-specialized-train "LO_PB:1,2;LO_TC:1,2;PB_TC:1,2" --l1-specialized-eval "..."` | `TYPE:seeds;...` | `{base}/{TYPE}/seed{N}/ppo/latest.pt` | `--l1-specialized-base-dir` |
 
-Training a level-1 agent needs no loader: with `--recipe-domain 3recipe` (default)
-the level-0 pool is built from `--pool-seed`, `--train-pool-size` and `--p`; with
+Training a Level-1 agent needs no loader: with `--recipe-domain 3recipe` (default)
+the Level-0 pool is built from `--pool-seed`, `--train-pool-size` and `--p`; with
 `--recipe-domain 6recipe` from `--l0-pair-type` and `--p`.
 
 ## Configuration files
 
 | file | use |
 |---|---|
-| `config/fc_small_test.yaml` | 3-recipe kitchen, horizon 40. Used by every 3-recipe run (level 1, baselines, level 2, evaluation). |
+| `config/fc_small_test.yaml` | 3-recipe kitchen, horizon 40. Used by every 3-recipe run (Level-1, baselines, Level-2, evaluation). |
 | `config/fc_small_test_h80.yaml` | same kitchen, horizon 80 |
 | `config/fc_small_6recipe.yaml` | 6-recipe kitchen, horizon 40 |
-| `config/fc_small_6recipe_h80.yaml` | 6-recipe kitchen, horizon 80. Used by every 6-recipe level-1 and baseline run and by all 6-recipe evaluation. |
-| `config/fc_small_6recipe_h80_b3c3_pair_c80_plate5.yaml` | 6-recipe kitchen, horizon 80, with `complete_reward: 80`, `board_placement_reward: 3`, `board_chop_reward: 3`, `plating_reward: 5`, `plate_mixing: pair`. Used for 6-recipe level-2 training only (the default of `scripts/overcooked/FI/*/train_L2.sh`); the trained agent is evaluated with `fc_small_6recipe_h80.yaml`. |
+| `config/fc_small_6recipe_h80.yaml` | 6-recipe kitchen, horizon 80. Used by every 6-recipe Level-1 and baseline run and by all 6-recipe evaluation. |
+| `config/fc_small_6recipe_h80_b3c3_pair_c80_plate5.yaml` | 6-recipe kitchen, horizon 80, with `complete_reward: 80`, `board_placement_reward: 3`, `board_chop_reward: 3`, `plating_reward: 5`, `plate_mixing: pair`. Used for 6-recipe Level-2 training only (the default of `scripts/overcooked/FI/*/train_L2.sh`); the trained agent is evaluated with `fc_small_6recipe_h80.yaml`. |
 
 Config keys: `mode` (level file name), `horizon`, `recipes`, `recipe_domain` (`3recipe` or
 `6recipe`), `obs_spaces`, `num_agents`, and the reward keys:

@@ -6,11 +6,17 @@ Official code for the paper
 > Upasana Biswas, Durgesh Kalwar, Subbarao Kambhampati, Sarath Sreedharan
 > NeurIPS 2026. [arXiv:2602.17737](https://arxiv.org/abs/2602.17737)
 
-NestRL trains an agent to coordinate with partners that adapt to it. Agents are trained in
-levels: each level is trained against a pool of adaptive agents from the level below, and is
-evaluated with held-out adaptive partners it has never interacted with. This repository
-contains the training regime, the Overcooked and Level-Based Foraging environments, the
-baselines, the evaluation of LLM agents, and the behaviour analysis.
+Mutual adaptation is a central challenge in human-AI teaming: humans adjust their strategies
+in response to the agent they are working with. NestRL is a nested training regime in which
+agents at each level are trained against adaptive agents from the level below.
+
+- **Level-0** partners are fixed, rule-based policies.
+- **Level-1** partners are trained against the Level-0 partners. They are the adaptive partners.
+- The **Level-2** agent is trained against a pool of Level-1 partners and is evaluated with
+  held-out Level-1 partners that it has not seen during training.
+
+This repository contains the code for training and evaluating NestRL and the baselines in
+Overcooked and Level-Based Foraging, the evaluation of LLM agents, and the behavior analysis.
 
 ## Contents
 
@@ -18,7 +24,7 @@ baselines, the evaluation of LLM agents, and the behaviour analysis.
 |---|---|---|
 | `scripts/` | launch scripts for training and evaluation, one folder per setting and seat | [scripts/README.md](scripts/README.md) |
 | `environment/` | Overcooked (3-recipe and 6-recipe kitchens) and Level-Based Foraging | [environment/README.md](environment/README.md) |
-| `analysis/` | behaviour analysis of evaluation rollouts and table statistics | [analysis/README.md](analysis/README.md) |
+| `analysis/` | behavior analysis of evaluation rollouts and statistics | [analysis/README.md](analysis/README.md) |
 | `llm_agent/`, `eval_llm.py` | LLM ego agent and its evaluation | [llm_agent/README.md](llm_agent/README.md) |
 | `learning/` | models, interaction-history buffer and PPO | |
 | `train_.py`, `online_test_.py` | training and evaluation entry points called by the scripts | |
@@ -54,7 +60,7 @@ The same commands are in `install.sh`. To check the installation, run a short tr
 SMOKE=1 SEEDS=1 bash scripts/overcooked/FC/bothsides/train_L1.sh
 ```
 
-It should end with `all level-1 runs finished` and leave a checkpoint under
+It should end with `all Level-1 runs finished` and leave a checkpoint under
 `logs/Overcooked/ppo_smoke_FC/bothsides/L1/Ours/seed1_seed1/ppo/`.
 
 The launch scripts read a few environment variables:
@@ -69,74 +75,20 @@ The launch scripts read a few environment variables:
 
 ## Quick start
 
-The full sequence for the homogeneous Overcooked setting, with one agent trained for both
-seats (details and all options in [scripts/README.md](scripts/README.md)):
+We give the full sequence for Overcooked with three recipes, where one agent is trained for
+both seats. All settings and options are described in [scripts/README.md](scripts/README.md).
 
 ```bash
-bash scripts/overcooked/FC/bothsides/train_L1.sh                    # level-1 partner pool
+bash scripts/overcooked/FC/bothsides/train_L1.sh                    # Level-1 partner pool
 LEVEL=L1 SEEDS="$(seq -s ' ' 1 25)" bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh   # verify the pool
 bash scripts/overcooked/FC/bothsides/train_baselines.sh             # baselines
-bash scripts/overcooked/FC/bothsides/train_L2.sh                    # level-2 agent (NestRL)
+bash scripts/overcooked/FC/bothsides/train_L2.sh                    # Level-2 agent (NestRL)
 LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L1.sh  # held-out adaptive partners
-LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh  # level-0 partners
+LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh  # Level-0 partners
 ```
 
-Level-1 runs take 30M environment steps and level-2 runs 60M; use `SEEDS`, `GPUS` and
-`MAXJOBS` to fit the runs to your hardware.
-
-## Training regime
-
-Three levels of partners are trained in sequence, each level only against the
-previous one (no mixing):
-
-- **Level 0**: rule-based partners, each specialised in one recipe (or item type).
-- **Level 1**: PPO against the level-0 pool.
-- **Level 2**: PPO against a pool of level-1 seeds. Held-out level-1 seeds are
-  used for evaluation.
-
-Every method can be run through the same regime with its own architecture: a method's
-level-2 agent is trained against level-1 agents of the same method (`METHOD` in the scripts).
-
-## Overcooked
-
-Two partner settings share the same code and differ only in the environment config and the
-level-0 pool. The scripts name them after the level-1 partner pool the ego faces:
-
-- **FC, Fully Compatible** (homogeneous): 3 recipes, 6 ingredients, 7x8 kitchen, horizon 40;
-  every level-1 partner can prepare all three recipes.
-- **PC, Partially Compatible**: same kitchen; each level-1 partner knows two of the three recipes.
-- **FI, Fully Incompatible** (heterogeneous): 6 recipes in 3 ingredient-disjoint types, 12
-  ingredients, 7x11 kitchen, horizon 80; each level-1 partner knows the two recipes of one type.
-
-The environments are described in [`environment/README.md`](environment/README.md); the
-scripts, their variables and the output layout in [`scripts/README.md`](scripts/README.md).
-For each setting and each seat (`left`, `right`, `bothsides`) there are five scripts:
-
-```
-scripts/overcooked/{FC,PC,FI}/{left,right,bothsides}/
-    train_L1.sh            level-1 partner pool of any METHOD vs the level-0 partners
-    train_baselines.sh     the baselines vs the level-0 partners (comparison egos)
-    train_L2.sh            level 2 of any METHOD vs its own level-1 pool (nested regime)
-    eval_method_vs_L0.sh   evaluation vs the level-0 partners
-    eval_method_vs_L1.sh   evaluation vs held-out level-1 partners
-```
-
-Evaluation follows the training protocol: 10 rounds of 5 episodes with the same partner, the
-ego's history cleared between rounds.
-
-## Level-Based Foraging
-
-`environment/lbf/` implements the two-agent typed-item LBF variant (see its README). The
-scripts under `scripts/lbf/{left,right,bothsides}/` are `train_L1.sh`, `train_baselines.sh`
-and `train_L2.sh`, with the same variables as the Overcooked ones.
-
-## LLM agents
-
-`eval_llm.py` and `llm_agent/` evaluate an LLM as the ego agent in Overcooked
-against trained level-1 partners, with high-level skills (`--actions high`) and
-per-round memory (`--memory full`). Any OpenAI-compatible chat endpoint works:
-set `LLM_BASE_URL` and `LLM_API_KEY`. `scripts/overcooked/llm/` has
-the launch scripts (`run_llm_heldout.sh` is the held-out-partner run).
+Level-1 agents are trained for 30M environment steps and Level-2 agents for 60M. Use `SEEDS`,
+`GPUS` and `MAXJOBS` to fit the runs to your hardware.
 
 ## Citation
 

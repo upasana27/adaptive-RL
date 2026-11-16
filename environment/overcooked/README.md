@@ -187,11 +187,11 @@ the level-0 pool is built from `--pool-seed`, `--train-pool-size` and `--p`; wit
 
 | file | use |
 |---|---|
-| `config/fc_small_test.yaml` | 3-recipe kitchen, horizon 40 (all 3-recipe training and evaluation) |
+| `config/fc_small_test.yaml` | 3-recipe kitchen, horizon 40. Used by every 3-recipe run (level 1, baselines, level 2, evaluation). |
 | `config/fc_small_test_h80.yaml` | same kitchen, horizon 80 |
 | `config/fc_small_6recipe.yaml` | 6-recipe kitchen, horizon 40 |
-| `config/fc_small_6recipe_h80.yaml` | 6-recipe kitchen, horizon 80 (all 6-recipe level-1 training and evaluation) |
-| `config/fc_small_6recipe_h80_b3c3_pair_c80_plate5.yaml` | 6-recipe kitchen, horizon 80, used for level-2 training: `complete_reward: 80`, `board_placement_reward: 3`, `board_chop_reward: 3`, `plating_reward: 5`, `plate_mixing: pair` |
+| `config/fc_small_6recipe_h80.yaml` | 6-recipe kitchen, horizon 80. Used by every 6-recipe level-1 and baseline run and by all 6-recipe evaluation. |
+| `config/fc_small_6recipe_h80_b3c3_pair_c80_plate5.yaml` | 6-recipe kitchen, horizon 80, with `complete_reward: 80`, `board_placement_reward: 3`, `board_chop_reward: 3`, `plating_reward: 5`, `plate_mixing: pair`. Used for 6-recipe level-2 training only (the default of `scripts/overcooked/FI/*/train_L2.sh`); the trained agent is evaluated with `fc_small_6recipe_h80.yaml`. |
 
 Config keys: `mode` (level file name), `horizon`, `recipes`, `recipe_domain` (`3recipe` or
 `6recipe`), `obs_spaces`, `num_agents`, and the reward keys:

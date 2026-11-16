@@ -21,7 +21,7 @@ text. The prompt contains no hint about which seat can deliver and no example st
 
 Two interfaces (`--actions`):
 
-- **`high`** (used in the paper): the model picks one skill from a fixed set, following
+- **`high`** (the default of the launch scripts): the model picks one skill from a fixed set, following
   ProAgent (Zhang et al., 2024). The preconditions are given as pseudo-code in the prompt:
   `pickup(X)`, `chop()`, `put_on_plate()`, `place_on_counter()`, `pickup_plate()`,
   `deliver()`, `wait(n)`. A controller executes the skill with a shortest-path plan that is
@@ -61,7 +61,7 @@ python eval_llm.py --model <model id> --domain FC --actions high --memory full \
 #   (a recipe R1..R6, or a type R1R2 / R3R4 / R5R6 with --l0-index 0|1 to choose the recipe of the type)
 ```
 
-`scripts/overcooked/llm/run_llm_heldout.sh` runs the paper's evaluation: the model against
+`scripts/overcooked/llm/run_llm_heldout.sh` runs the default evaluation: the model against
 every held-out level-1 partner, both seats in the homogeneous setting (FC) and the left seat
 in the heterogeneous setting (FI, horizon 80). `MODEL`, `FC_POOL`, `FI_POOL`, `FC_SEEDS` and
 `FI_PARTNERS` select the model and the partners. `run_llm_suite.sh` is a shorter survey
@@ -84,7 +84,6 @@ Main arguments of `eval_llm.py`:
 distributions of both agents and the call statistics. Check two things before using a run:
 
 - **Failed or unparseable calls** (`llm.failures`, `llm.unparseable`). They fall back to
-  doing nothing, so a run with many of them measures the endpoint, not the model. All runs
-  reported in the paper have zero of both.
+  doing nothing, so a run with many of them measures the endpoint, not the model.
 - **Partner action entropy.** A value near `log 6 = 1.79` for a level-1 partner means it is
   acting at random, i.e. the checkpoint was loaded with the wrong configuration.

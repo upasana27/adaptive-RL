@@ -67,7 +67,7 @@ and `train_L2.sh`, with the same variables as the Overcooked ones.
 against trained level-1 partners, with high-level skills (`--actions high`) and
 per-round memory (`--memory full`). Any OpenAI-compatible chat endpoint works:
 set `LLM_BASE_URL` and `LLM_API_KEY`. `scripts/overcooked/llm/` has
-the suite used in the paper (`run_llm_heldout.sh` is the held-out-partner run).
+the launch scripts (`run_llm_heldout.sh` is the held-out-partner run).
 
 ## Code structure
 

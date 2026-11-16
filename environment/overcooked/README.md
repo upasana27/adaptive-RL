@@ -159,7 +159,7 @@ of replacing the planned action by a random move, never an interact).
 | 3-recipe | `generate_policy_pool` | `nav_p = tar_p = rand_p = p` | one partner per recipe; the recipe order is shuffled with `--pool-seed`; `--train-pool-size 3` gives all three |
 | 6-recipe | `generate_policy_pool_6recipe` | `rand_p = p`, `nav_p = tar_p = 0` | `--l0-pair-type R1R2 / R3R4 / R5R6` gives the two partners of a type, `ALL` all six |
 
-The pools used in the paper have `p = 0.25`. `--p 0` gives deterministic partners.
+The scripts use `p = 0.25` by default. `--p 0` gives deterministic partners.
 
 ## Pretrained level-1 partners
 

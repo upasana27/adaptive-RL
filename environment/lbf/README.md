@@ -15,7 +15,7 @@ the alternative recipes in Overcooked.
 | agents | 2 |
 | item types | 3 |
 | items per episode | 3, one of each type |
-| horizon | 40 in the config; the training and evaluation scripts pass `--horizon 80`, which is the value used in the paper |
+| horizon | 40 in the config; the training and evaluation scripts pass `--horizon 80` by default |
 | observation size | 22 |
 | actions | 6 |
 
@@ -73,7 +73,7 @@ and ignores the other items. At every step it
 
 Two optional noise knobs: `nav_p` (probability of preferring the horizontal move) and
 `rand_p` (probability of a random move instead of the planned one). The pools in the
-paper use `--p 0`, so the partners are deterministic.
+scripts use `--p 0` by default, so the partners are deterministic.
 
 The level-0 pool (`get_train_eval_pool`) has one partner per type:
 `--train-pool-size 3 --eval-pool-size 3` with `--lbf-num-fruit-types 3`.

@@ -11,9 +11,9 @@ faces. "Compatible" refers to the recipes the partners can prepare.
 
 | code | name | kitchen | level-1 partner pool |
 |---|---|---|---|
-| **FC** | Fully Compatible | 3-recipe, horizon 40 | every partner was trained against all three level-0 recipes and can prepare any of them. The paper's *homogeneous* setting. |
+| **FC** | Fully Compatible | 3-recipe, horizon 40 | every partner was trained against all three level-0 recipes and can prepare any of them. The *homogeneous* setting. |
 | **PC** | Partially Compatible | 3-recipe, horizon 40 | each partner was trained against two of the three level-0 recipes; three partner types `LO_PB`, `LO_TC`, `PB_TC` (Lettuce-Onion, Potato-Broccoli, Tomato-Carrot), which overlap pairwise. |
-| **FI** | Fully Incompatible | 6-recipe, horizon 80 | each partner was trained against the two level-0 recipes of one ingredient-disjoint type `R1R2`, `R3R4`, `R5R6`; partners of different types share no recipe. The paper's *heterogeneous* setting. |
+| **FI** | Fully Incompatible | 6-recipe, horizon 80 | each partner was trained against the two level-0 recipes of one ingredient-disjoint type `R1R2`, `R3R4`, `R5R6`; partners of different types share no recipe. The *heterogeneous* setting. |
 
 `lbf/` is Level-Based Foraging (three item types; every level-1 partner can collect any item,
 so it corresponds to FC).
@@ -45,23 +45,17 @@ pool. Only the right seat can deliver in Overcooked.
 
 ## Methods
 
-`METHOD` / `METHODS` take `Ours`, `PACE`, `LiAM`, `LiAMx`, `LiLi`, `Generalist`. The
-architecture flags are defined once in `common/lib.sh` (`method_flags`):
+`METHOD` / `METHODS` take `Ours`, `PACE`, `LiAM`, `LiAMx`, `LiLi`, `Generalist`. The flags of
+each method are defined once in `common/lib.sh` (`method_flags`); the baseline implementations
+and their flags are those of the PACE codebase.
 
-| method | partner model | auxiliary objective |
+| method | reference | repository |
 |---|---|---|
-| Ours | permutation-invariant encoder of (own observation, partner action) over the round, mean-pooled into a deterministic 128-d latent; latent-conditioned actor and critic | none, trained end to end through PPO |
-| PACE | same as Ours | peer-identification head (cross-entropy over training-partner identity, coefficient 1.0) and classification reward (0.2, 1M-step warm-up, decayed over 25M steps) |
-| LiLi | same encoder as Ours | transition prediction on the previous episode (coefficient 1.0) |
-| Generalist | GRU over the round (hidden 128, chunks of 20, shared actor-critic) | none |
-| LiAM | GRU, own last action appended to the input, state reset every episode | partner observation and action prediction (coefficient 1.0 each) |
-| LiAMx | LiAM with the state carried across the episodes of the round | same as LiAM |
-
-PPO settings are shared: 2x128 ReLU MLPs, 1000 steps per update, 4 epochs, 18 minibatches
-(4 in LBF), entropy 3e-2, value loss 0.5, gamma 0.99, GAE 0.95, gradient clipping 15.
-Learning rate: 1e-3 for every level-1 and baseline run, except Ours in FC (3e-4); 3e-4 for
-Ours at level 2 and 1e-3 for the baselines' level 2. Level 1 trains for 30M environment steps,
-level 2 for 60M.
+| PACE | Ma et al., *Fast Peer Adaptation with Context-aware Exploration*, ICML 2024 | https://github.com/linkct/PACE |
+| LiAM | Papoudakis et al., *Agent Modelling under Partial Observability for Deep Reinforcement Learning*, NeurIPS 2021 | https://github.com/uoe-agents/LIAM |
+| LiAMx | LiAM with the recurrent state carried across the episodes of a round, as implemented in PACE | https://github.com/linkct/PACE |
+| LiLi | Xie et al., *Learning Latent Representations to Influence Multi-Agent Interaction*, CoRL 2020 | implementation from https://github.com/linkct/PACE |
+| Generalist | recurrent policy trained against the whole partner pool, as implemented in PACE | https://github.com/linkct/PACE |
 
 ## Variables
 

@@ -1,6 +1,6 @@
 # Behaviour analysis
 
-Scripts that turn evaluation rollouts into the behavioural statistics of the paper: who
+Scripts that turn evaluation rollouts into behavioural statistics: who
 commits to a recipe first (waiting versus leading), which recipes an agent goes for and
 whether its partner follows, and how behaviour changes across the episodes of a round.
 They are the same for every Overcooked setting (FC, PC, FI) and seat.

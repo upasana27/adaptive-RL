@@ -80,7 +80,7 @@ SEEDS="1 2 3" GPUS="0 1" bash scripts/overcooked/FC/bothsides/train_L1.sh
 | `P` | level-0 partner noise (default 0.25 in Overcooked, 0 in LBF) |
 | `NUM_ENV_STEPS`, `LR`, `ENV_CONFIG`, `EXTRA_ARGS` | overrides of the defaults above |
 | `L1_BASE_DIR`, `TRAIN_SEEDS`/`EVAL_SEEDS` (FC), `TRAIN_SPEC`/`EVAL_SPEC` (PC, FI, LBF) | level-1 pool for level-2 training; spec format `TYPE:1,2,3;TYPE:1,2,3` |
-| `LEVEL`, `TYPES`, `EGO_BASE`, `PARTNER_METHOD`, `PARTNER_SEEDS`/`PARTNER_SPEC`, `TEST_PASS`, `TEST_EPISODES` | evaluation: which agent, which partners (default: the same method's held-out seeds 16-25), protocol (default 10 rounds x 5 episodes) |
+| `LEVEL`, `TYPES`, `EGO_BASE`, `PARTNER_METHOD`, `PARTNER_SEEDS`/`PARTNER_SPEC`, `TEST_PASS`, `TEST_EPISODES` | evaluation: which agent, which partners (default: the same method's held-out partners), protocol (default 10 rounds x 5 episodes) |
 | `FEED_HISTORY` | write the level-1 partners' interaction history during level-2 training and evaluation as in their own training (default on; off in PC) |
 | `PACE_ROOT`, `CONDA_SH`, `CONDA_ENV`, `WANDB_USER` | machine setup, see the top-level README |
 | `SMOKE=1` | 24k-step run to check that a script launches |
@@ -105,25 +105,26 @@ final numbered checkpoint, `latest.pt` or `individual_latest.pt`.
 
 ## Workflow per domain
 
-Each level-1 pool (per type in PC and FI) is split into three disjoint seed groups:
+Each level-1 pool (per type in PC and FI) consists of three disjoint groups of partners,
+trained with independent seeds:
 
-| seeds | role |
+| partners | role |
 |---|---|
-| 1-10 | training partners of level 2 |
-| 11-15 | evaluation partners during level-2 training (the periodic evaluation in the training log) |
-| 16-25 | held-out partners, never seen during training, used by `eval_method_vs_L1.sh` |
+| 10 | training partners of level 2 |
+| 5 | evaluation partners during level-2 training (the periodic evaluation in the training log) |
+| 10 | held-out partners, never seen during training, used by `eval_method_vs_L1.sh` |
 
 1. `train_L1.sh METHOD=M` on the partner side (`right` for a left-seat ego, `left` for a
-   right-seat ego, `bothsides` for a both-sides ego) trains M's level-1 pool: 25 seeds for FC and
-   LBF, 25 per type (75) for PC and FI, against level-0 partners with noise `P=0.25`.
+   right-seat ego, `bothsides` for a both-sides ego) trains M's level-1 pool: 25 partners for FC
+   and LBF, 25 per type (75) for PC and FI, against level-0 partners with noise `P=0.25`.
    Every method that is run through the nested regime needs its own pool.
 2. `train_baselines.sh` on the ego side trains the comparison egos: each baseline against the
    level-0 partners, 5 seeds. These agents are never used as partners.
-3. `train_L2.sh METHOD=M` on the ego side trains 5 level-2 seeds of M against pool seeds 1-10,
-   evaluating during training against seeds 11-15.
+3. `train_L2.sh METHOD=M` on the ego side trains 5 level-2 seeds of M against the 10 training
+   partners, evaluating during training against the 5 evaluation partners.
 4. `eval_method_vs_L1.sh METHOD=M LEVEL=L2` evaluates the level-2 agents and
    `eval_method_vs_L1.sh METHOD=M LEVEL=L1 EGO_BASE=<baseline run dir>` the original-regime
-   agents against M's held-out partners (seeds 16-25), method matched; `eval_method_vs_L0.sh`
+   agents against M's 10 held-out partners, method matched; `eval_method_vs_L0.sh`
    evaluates the same agents against the level-0 partners.
 
 The evaluation scripts run the 10 x 5 protocol on the final checkpoint; the history period of

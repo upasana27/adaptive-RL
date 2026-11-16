@@ -87,11 +87,13 @@ flags as the Overcooked recipe-subset loader:
 --use-l1-specialized --l1-specialized-train "L1_FC_h80:1,2" --l1-specialized-eval "L1_FC_h80:3"
 ```
 
-The spec is `TAG:seed,seed;TAG:seed`, and the checkpoint path is
-`logs/LBF/ppo_june_new_exp/{TAG}/seed{N}_seed{N}/ppo/latest.pt` under the repository
-root (set `PACE_ROOT` to relocate). `--lbf-horizon 80` sets the length of the
-partner's history buffer and must match `--horizon`. `--lbf-l1-eval-spec` adds
-level-1 partners to the evaluation pool of a run that trains against level-0 partners.
+The spec is `TAG:seed,seed;TAG:seed`, where `TAG` is a directory under the pool base
+directory (`--l1-specialized-base-dir`, default `logs/LBF/ppo_june_new_exp` under the
+repository root; the release scripts pass `logs/LBF/ppo_LBF/{side}/L1`). The checkpoint is
+`{base}/{TAG}/seed{N}_seed{N}/ppo/` (or `seed{N}/ppo/`) with `latest.pt`, `30000000.pt` or
+`individual_latest.pt`. `--lbf-horizon 80` sets the length of the partner's history buffer and
+must match `--horizon`. `--lbf-l1-eval-spec` adds level-1 partners to the evaluation pool of a
+run that trains against level-0 partners.
 
 ## Configuration files
 

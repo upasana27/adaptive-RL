@@ -224,7 +224,8 @@ def get_train_eval_l1_pool_lbf(args, train_spec, eval_spec, horizon=80):
     Checkpoint path: logs/LBF/ppo_june_new_exp/{TYPE}/seed{N}_seed{N}/ppo/latest.pt
     """
     repo_root = os.environ.get('PACE_ROOT', os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')))
-    BASE = os.path.join(repo_root, 'logs', 'LBF', 'ppo_june_new_exp')
+    # --l1-specialized-base-dir overrides the pool location (default: the june_new_exp layout).
+    BASE = getattr(args, 'l1_specialized_base_dir', None) or os.path.join(repo_root, 'logs', 'LBF', 'ppo_june_new_exp')
 
     def load_pool(spec, label):
         pool = []
@@ -232,8 +233,17 @@ def get_train_eval_l1_pool_lbf(args, train_spec, eval_spec, horizon=80):
             agent_type, seeds_str = type_spec.strip().split(':')
             seeds = [int(s.strip()) for s in seeds_str.split(',')]
             for seed in seeds:
-                ckpt = f'{BASE}/{agent_type}/seed{seed}_seed{seed}/ppo/latest.pt'
-                if not os.path.exists(ckpt):
+                ckpt = None
+                for sub in (f'seed{seed}_seed{seed}', f'seed{seed}'):
+                    for fname in ('latest.pt', '30000000.pt', 'individual_latest.pt'):
+                        cand = f'{BASE}/{agent_type}/{sub}/ppo/{fname}'
+                        if os.path.exists(cand):
+                            ckpt = cand
+                            break
+                    if ckpt:
+                        break
+                if ckpt is None:
+                    ckpt = f'{BASE}/{agent_type}/seed{seed}_seed{seed}/ppo/latest.pt'
                     raise FileNotFoundError(f'[LBF L1 pool] {label} checkpoint not found: {ckpt}')
                 pool.append(_make_lbf_pretrained_policy(args, ckpt, horizon))
                 print(f'  [LBF L1 {label}] loaded {agent_type} seed {seed}')

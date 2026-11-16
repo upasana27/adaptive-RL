@@ -1056,6 +1056,25 @@ def get_train_eval_cross_seed_pool(args):
     # eval_pool = eval_pool[0:2]
     return train_pool, eval_pool
 
+def _resolve_l1_ckpt(base, seed, preferred):
+    """Find a level-1 partner checkpoint under {base}/seed{N}/ppo/ or {base}/seed{N}_seed{N}/ppo/.
+
+    Tries the preferred file name first, then the 30M file, then latest.pt (latent
+    architectures) and individual_latest.pt (joint-training architectures), so pools of
+    every method load with the same loader. Returns the canonical path when nothing exists.
+    """
+    names = []
+    for n in (preferred, '30000000.pt', 'latest.pt', 'individual_latest.pt'):
+        if n and n not in names:
+            names.append(n)
+    for sub in (f"seed{seed}", f"seed{seed}_seed{seed}"):
+        for fname in names:
+            cand = os.path.join(base, sub, 'ppo', fname)
+            if os.path.exists(cand):
+                return cand
+    return os.path.join(base, f"seed{seed}", 'ppo', names[0])
+
+
 def get_train_eval_level_1_pool_custom_seeds(args, train_seeds, eval_seeds):
     """
     Load L1 agents with custom seed selection for simplified L2 training.
@@ -1089,11 +1108,7 @@ def get_train_eval_level_1_pool_custom_seeds(args, train_seeds, eval_seeds):
     # first, then the raw seed{N}_seed{N}/ layout train_.py writes before consolidation.
     ckpt_name = getattr(args, 'l1_partner_ckpt', None) or '30000000.pt'
     def _resolve_ckpt(seed):
-        for sub in (f"seed{seed}", f"seed{seed}_seed{seed}"):
-            p = f"{base_location}/{sub}/ppo/{ckpt_name}"
-            if os.path.exists(p):
-                return p
-        return f"{base_location}/seed{seed}/ppo/{ckpt_name}"  # canonical path for the error msg
+        return _resolve_l1_ckpt(base_location, seed, ckpt_name)
 
     # --feed-partner-history: same opt-in as the FI disjoint loader (see there). Default off.
     feed_kwargs = {}
@@ -1450,9 +1465,7 @@ def get_train_eval_specialized_L1_pool(args, train_spec, eval_spec):
         for seed in seeds:
             # Consolidated layout: {base}/{TYPE}/seed{N}/ppo/latest.pt
             # Raw layout:          {base}/{TYPE}/seed{N}_seed{N}/ppo/latest.pt
-            checkpoint_path = f"{base_location}/{agent_type}/seed{seed}/ppo/latest.pt"
-            if not os.path.exists(checkpoint_path):
-                checkpoint_path = f"{base_location}/{agent_type}/seed{seed}_seed{seed}/ppo/latest.pt"
+            checkpoint_path = _resolve_l1_ckpt(f"{base_location}/{agent_type}", seed, 'latest.pt')
 
             if os.path.exists(checkpoint_path):
                 policy = PretrainedPolicy_test(
@@ -1482,9 +1495,7 @@ def get_train_eval_specialized_L1_pool(args, train_spec, eval_spec):
         seeds = [int(s.strip()) for s in seeds_str.split(',')]
         
         for seed in seeds:
-            checkpoint_path = f"{base_location}/{agent_type}/seed{seed}/ppo/latest.pt"
-            if not os.path.exists(checkpoint_path):
-                checkpoint_path = f"{base_location}/{agent_type}/seed{seed}_seed{seed}/ppo/latest.pt"
+            checkpoint_path = _resolve_l1_ckpt(f"{base_location}/{agent_type}", seed, 'latest.pt')
 
             if os.path.exists(checkpoint_path):
                 policy = PretrainedPolicy_test(
@@ -2601,12 +2612,7 @@ def get_train_eval_l1_disjoint_pool(args, train_spec, eval_spec):
     # first then the raw seed{N}_seed{N}/ layout, and preferring the explicit 30M ckpt
     # over latest.pt so the pool is reproducible.
     def _resolve_ckpt(agent_type, seed):
-        for sub in (f"seed{seed}", f"seed{seed}_seed{seed}"):
-            for fname in ("30000000.pt", "latest.pt"):
-                cand = f"{base_location}/{agent_type}/{sub}/ppo/{fname}"
-                if os.path.exists(cand):
-                    return cand
-        return f"{base_location}/{agent_type}/seed{seed}/ppo/30000000.pt"  # canonical path for the error msg
+        return _resolve_l1_ckpt(f"{base_location}/{agent_type}", seed, '30000000.pt')
 
     def _load_spec(label, spec):
         pool = []

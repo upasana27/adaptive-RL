@@ -30,46 +30,44 @@ level-2 agent is trained against level-1 agents of the same method.
 
 ## Overcooked
 
-Two partner settings share the same code and differ only in the environment
-config and the level-0 pool:
+Two partner settings share the same code and differ only in the environment config and the
+level-0 pool. The scripts name them after the level-1 partner pool the ego faces:
 
-- **Homogeneous (FC)**: 3 recipes, 6 ingredients, 7x8 kitchen, horizon 40,
-  config `environment/overcooked/config/fc_small_test.yaml`.
-- **Heterogeneous (FI)**: 6 recipes in 3 ingredient-disjoint types, 12
-  ingredients, 7x11 kitchen, horizon 80, config
-  `environment/overcooked/config/fc_small_6recipe_h80.yaml`
-  (level-2 shaping variant: `fc_small_6recipe_h80_b3c3_pair_c80_plate5.yaml`).
-- **PC**: level-1 partners specialised to recipe subsets of the homogeneous domain.
+- **FC, Fully Compatible** (homogeneous): 3 recipes, 6 ingredients, 7x8 kitchen, horizon 40;
+  every level-1 partner can prepare all three recipes.
+- **PC, Partially Compatible**: same kitchen; each level-1 partner knows two of the three recipes.
+- **FI, Fully Incompatible** (heterogeneous): 6 recipes in 3 ingredient-disjoint types, 12
+  ingredients, 7x11 kitchen, horizon 80; each level-1 partner knows the two recipes of one type.
 
-Scripts live under `scripts/overcooked/june_new_exp/`:
+The environments are described in [`environment/README.md`](environment/README.md); the
+scripts, their variables and the output layout in [`scripts/README.md`](scripts/README.md).
+For each setting and each seat (`left`, `right`, `bothsides`) there are five scripts:
 
-| stage | homogeneous (FC) | heterogeneous (FI) | PC |
-|---|---|---|---|
-| level 1, one seat | `train/left/train_L1_FC.sh`, `train/right/train_baselines_FC_right.sh` | `train/left/train_L1_FI_p05.sh`, `supervise_L1_FI.sh`, `train/right/train_baselines_FI.sh`, `train/left/train_baselines_FI_left_ALL.sh` | `train/left/train_L1_PC.sh`, `train/right/train_L1_PC_p05_peerid_batched.sh`, `scripts/overcooked/train_L1_specialized.sh` |
-| level 1, both seats | `train/train_L1_bothsides.sh` | `train/train_L1_bothsides.sh` (set `ENV_CONFIG`) | |
-| level 2 | `train/train_L2_bothsides_FC.sh`, `train/left/train_L2_baselines_FC.sh` | `train/left/train_L2_FI.sh` | `train/left/train_L2_PC.sh` |
-| evaluation | `eval/bothsides/*.sh`, `eval/left/eval_regime_vs_heldout.sh`, `eval/left/eval_baselines_L2_vs_heldout_FC.sh`, `eval/{left,right}/eval_L1_FC_vs_L0.sh`, `eval/eval_L1_bothsides_crossplay.sh` | `eval/right/eval_L1_FI_vs_L0.sh` | `eval/right/eval_L1_PC_vs_L0.sh` |
+```
+scripts/overcooked/{FC,PC,FI}/{left,right,bothsides}/
+    train_L1.sh            level-1 partner pool of any METHOD vs the level-0 partners
+    train_baselines.sh     the baselines vs the level-0 partners (comparison egos)
+    train_L2.sh            level 2 of any METHOD vs its own level-1 pool (nested regime)
+    eval_method_vs_L0.sh   evaluation vs the level-0 partners
+    eval_method_vs_L1.sh   evaluation vs held-out level-1 partners
+```
 
-`consolidate_checkpoints.sh` and `early_stop_bothsides_L1.sh` are helpers used by
-the launchers. Each script documents its environment-variable overrides in its header.
-
-Evaluation follows the training protocol: 10 rounds of 5 episodes
-(`online_test_.py --test-pass 10 --test-episodes 5`), with the ego's history
-cleared between rounds.
+Evaluation follows the training protocol: 10 rounds of 5 episodes with the same partner, the
+ego's history cleared between rounds.
 
 ## Level-Based Foraging
 
-`environment/lbf/` implements the two-agent typed-fruit LBF variant. Scripts are
-under `scripts/lbf/june_new_exp/` (level-1, level-2 and baselines, config
-`environment/lbf/config/lbf_fc_3type.yaml`).
+`environment/lbf/` implements the two-agent typed-item LBF variant (see its README). The
+scripts under `scripts/lbf/{left,right,bothsides}/` are `train_L1.sh`, `train_baselines.sh`
+and `train_L2.sh`, with the same variables as the Overcooked ones.
 
 ## LLM agents
 
 `eval_llm.py` and `llm_agent/` evaluate an LLM as the ego agent in Overcooked
 against trained level-1 partners, with high-level skills (`--actions high`) and
 per-round memory (`--memory full`). Any OpenAI-compatible chat endpoint works:
-set `LLM_BASE_URL` and `LLM_API_KEY`. `scripts/overcooked/june_new_exp/llm/`
-has the suite used in the paper (`run_llm_heldout.sh` is the held-out-partner run).
+set `LLM_BASE_URL` and `LLM_API_KEY`. `scripts/overcooked/llm/` has
+the suite used in the paper (`run_llm_heldout.sh` is the held-out-partner run).
 
 ## Code structure
 

@@ -103,34 +103,53 @@ same method on the partner side), so the three stages chain without arguments. S
 `L1_BASE_DIR` (or `PARTNER_BASE`) to use a pool stored elsewhere. Every loader accepts the
 final numbered checkpoint, `latest.pt` or `individual_latest.pt`.
 
-## Workflow per domain
+## Run-through
 
 Each level-1 pool (per type in PC and FI) consists of three disjoint groups of partners,
-trained with independent seeds:
+trained with independent seeds: 10 training partners of level 2, 5 evaluation partners used
+during level-2 training (the periodic evaluation in the training log), and 10 held-out
+partners never seen during training, used by `eval_method_vs_L1.sh`.
 
-| partners | role |
-|---|---|
-| 10 | training partners of level 2 |
-| 5 | evaluation partners during level-2 training (the periodic evaluation in the training log) |
-| 10 | held-out partners, never seen during training, used by `eval_method_vs_L1.sh` |
+The whole regime for our method in the homogeneous setting with a both-sides ego, from
+nothing to the numbers, is the following sequence (each step waits for the previous one):
 
-1. `train_L1.sh METHOD=M` on the partner side (`right` for a left-seat ego, `left` for a
-   right-seat ego, `bothsides` for a both-sides ego) trains M's level-1 pool: 25 partners for FC
-   and LBF, 25 per type (75) for PC and FI, against level-0 partners with noise `P=0.25`.
-   Every method that is run through the nested regime needs its own pool.
-2. `train_baselines.sh` on the ego side trains the comparison egos: each baseline against the
-   level-0 partners, 5 seeds. These agents are never used as partners.
-3. `train_L2.sh METHOD=M` on the ego side trains 5 level-2 seeds of M against the 10 training
-   partners, evaluating during training against the 5 evaluation partners.
-4. `eval_method_vs_L1.sh METHOD=M LEVEL=L2` evaluates the level-2 agents and
-   `eval_method_vs_L1.sh METHOD=M LEVEL=L1 EGO_BASE=<baseline run dir>` the original-regime
-   agents against M's 10 held-out partners, method matched; `eval_method_vs_L0.sh`
-   evaluates the same agents against the level-0 partners.
+```bash
+# 1. level-1 partner pool: 25 partners against the level-0 partners (P=0.25), 30M steps each
+GPUS="0 1 2 3" MAXJOBS=8 bash scripts/overcooked/FC/bothsides/train_L1.sh
 
-The evaluation scripts run the 10 x 5 protocol on the final checkpoint; the history period of
-the ego equals the episodes per round. LBF has no separate evaluation script: its held-out
-numbers are the during-training evaluation of `train_L2.sh` (`EVAL_SPEC`) and of
-`train_L1.sh`/`train_baselines.sh` with `L1_EVAL_SPEC`.
+# 2. comparison egos: each baseline against the level-0 partners, 5 seeds each
+GPUS="0 1 2 3" MAXJOBS=8 bash scripts/overcooked/FC/bothsides/train_baselines.sh
+
+# 3. level 2 of our method against the 10 training partners, 5 seeds, 60M steps each
+GPUS="0 1 2 3" MAXJOBS=5 bash scripts/overcooked/FC/bothsides/train_L2.sh
+
+# 4. evaluation against the 10 held-out partners (10 rounds x 5 episodes, both seats)
+LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L1.sh
+LEVEL=L1 METHOD=Generalist EGO_BASE=logs/Overcooked/ppo_FC/bothsides/L1/Generalist \
+    PARTNER_METHOD=Ours bash scripts/overcooked/FC/bothsides/eval_method_vs_L1.sh   # one baseline ego vs the same partners
+# 5. evaluation against the level-0 partners
+LEVEL=L2 bash scripts/overcooked/FC/bothsides/eval_method_vs_L0.sh
+```
+
+The success rate of every run is printed at the end of each evaluation script and is on the
+`Final result` line of its log under `logs/Overcooked/FC/bothsides/eval_vs_L1/`.
+
+Variants:
+
+- **Seat.** For a left-seat ego the pool is trained with `right/train_L1.sh` and the ego with
+  `left/train_L2.sh`; the evaluation scripts in `left/` find the right-side pool. The opposite
+  for a right-seat ego.
+- **Setting.** Replace `FC` by `PC` or `FI`; `train_L1.sh` then trains the pool per partner
+  type (`TYPES`), 25 partners each, and the level-2 and evaluation scripts use all types.
+- **Nested regime of a baseline.** `METHOD=LiAM bash .../train_L1.sh` trains LiAM's own pool,
+  `METHOD=LiAM bash .../train_L2.sh` its level 2, and `METHOD=LiAM LEVEL=L2 bash
+  .../eval_method_vs_L1.sh` evaluates it against LiAM's held-out partners (method matched).
+- **LBF.** `scripts/lbf/{side}/train_L1.sh`, `train_baselines.sh`, `train_L2.sh` with the same
+  variables. There is no separate evaluation script: the held-out numbers are the
+  during-training evaluation of `train_L2.sh` (`EVAL_SPEC`) and of `train_L1.sh` /
+  `train_baselines.sh` with `L1_EVAL_SPEC`.
+- **Smaller runs.** `N_SEEDS`, `SEEDS`, `NUM_ENV_STEPS` and the pool variables shrink any step;
+  `SMOKE=1` runs a step for 24k steps to check that it launches.
 
 ## LLM agents
 
